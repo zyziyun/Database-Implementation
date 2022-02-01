@@ -25,8 +25,8 @@ main (void)
   
   initStorageManager();
 
-  testCreateOpenClose();
-  testSinglePageContent();
+  // testCreateOpenClose();
+  // testSinglePageContent();
 
   return 0;
 }

@@ -6,7 +6,7 @@
 
 /* manipulating page files */
 void initStorageManager (void) {
-
+    printf("storage manager is initializing...\n");
 }
 
 RC createPageFile (char *fileName) {
