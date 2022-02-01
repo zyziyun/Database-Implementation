@@ -1,12 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "storage_mgr.h"
 #include "dberror.h"
 
 unsigned long fsize(FILE *fp) {
     fseek(fp, 0, SEEK_END);
-    return ftell(fp);
+    unsigned long size = ftell(fp);
+    rewind(fp);
+    return size;
+}
+
+int fexist(char *fileName) {
+    return (access(fileName, 0) == 0);
 }
 
 /* manipulating page files */
@@ -46,27 +53,50 @@ RC createPageFile (char *fileName) {
  * @return RC 
  */
 RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
-    if (!fHandle) {
+    // check file exist
+    if (!fexist(fileName)) {
+        return RC_FILE_NOT_FOUND;
+    }
+    FILE *fp = fopen(fileName, "r");
+    if (fHandle == NULL) {
         return RC_FILE_HANDLE_NOT_INIT;
     }
-    FILE *fp = fopen(fileName, "r+");
-    if (!fp) {
-        return RC_FILE_NOT_FOUND; 
-    }
+    // get file size and calc the number of page
     unsigned long size = fsize(fp);
     fHandle->totalNumPages = (int)(size / PAGE_SIZE);
     fHandle->fileName = fileName;
     fHandle->mgmtInfo = fp;
     fHandle->curPagePos = 0;
-    fclose(fp);
     return RC_OK;
 }
 
+/**
+ * @brief close an open page file and destory fHandle
+ * 
+ * @param fHandle 
+ * @return RC 
+ */
 RC closePageFile (SM_FileHandle *fHandle) {
+    FILE *fp = (FILE*)fHandle->mgmtInfo;
+    if (fp == NULL) {
+        return RC_FILE_NOT_FOUND;
+    }
+    fclose(fp);
+    fHandle->mgmtInfo = NULL;
+    fHandle = NULL;
     return RC_OK;
 }
 
+/**
+ * @brief remove the page file
+ * 
+ * @param fileName 
+ * @return RC 
+ */
 RC destroyPageFile (char *fileName) {
+    if (remove(fileName) != 0) {
+        return RC_FILE_NOT_FOUND;
+    }
     return RC_OK;
 }
 
