@@ -63,7 +63,7 @@ RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
     if (!fexist(fileName)) {
         return RC_FILE_NOT_FOUND;
     }
-    FILE *fp = fopen(fileName, "r");
+    FILE *fp = fopen(fileName, "r+");
     if (fHandle == NULL) {
         return RC_FILE_HANDLE_NOT_INIT;
     }
@@ -182,15 +182,11 @@ RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
         return RC_FILE_HANDLE_NOT_INIT;
     }
     // check the file has less than pageNum pages.
-    if (pageNum < 0 || pageNum >= fHandle->totalNumPages) {
+    if (pageNum < 0 || pageNum > fHandle->totalNumPages) {
         return RC_WRITE_NON_EXISTING_PAGE;
     }
-    FILE *fp = (FILE*)fHandle->mgmtInfo;
-    unsigned long pos = pageNum * PAGE_SIZE;
-    int fs = fseek(fp, pos, SEEK_SET);
-    if (fs != 0) {
-        return RC_WRITE_NON_EXISTING_PAGE;
-    }
+    FILE *fp = fHandle->mgmtInfo;
+    int fs = fseek(fp, pageNum * PAGE_SIZE, SEEK_SET);
     int curr = fwrite(memPage, sizeof(char), PAGE_SIZE, fp);
     if (curr < PAGE_SIZE) {
         return RC_WRITE_NON_EXISTING_PAGE;

@@ -87,14 +87,14 @@ testSinglePageContent(void)
   TEST_CHECK(writeBlock (0, &fh, ph));
   printf("writing first block\n");
 
-  // // read back the page containing the string and check that it is correct
-  // TEST_CHECK(readFirstBlock (&fh, ph));
-  // for (i=0; i < PAGE_SIZE; i++)
-  //   ASSERT_TRUE((ph[i] == (i % 10) + '0'), "character in page read from disk is the one we expected.");
-  // printf("reading first block\n");
+  // read back the page containing the string and check that it is correct
+  TEST_CHECK(readFirstBlock (&fh, ph));
+  for (i=0; i < PAGE_SIZE; i++)
+    ASSERT_TRUE((ph[i] == (i % 10) + '0'), "character in page read from disk is the one we expected.");
+  printf("reading first block\n");
 
-  // // destroy new page file
-  // TEST_CHECK(destroyPageFile (TESTPF));  
+  // destroy new page file
+  TEST_CHECK(destroyPageFile (TESTPF));  
   
   TEST_DONE();
 }
