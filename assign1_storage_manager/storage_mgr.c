@@ -147,26 +147,41 @@ int getBlockPos (SM_FileHandle *fHandle) {
 }
 
 RC readFirstBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
-    return readBlock(0, fHandle, memPage);
+    if (RC_OK == readBlock(0, fHandle, memPage))
+        return RC_OK;
+    else
+        return RC_READ_NON_EXISTING_PAGE;
 }
 
 RC readPreviousBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int prev = getBlockPos(fHandle) - 1;
-    return readBlock(prev, fHandle, memPage);
+    if (RC_OK == readBlock(prev, fHandle, memPage))
+        return RC_OK;
+    else    
+        return RC_READ_NON_EXISTING_PAGE;
 }
 
 RC readCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
-    return readBlock(getBlockPos(fHandle), fHandle, memPage);
+    if(RC_OK==readBlock(getBlockPos(fHandle), fHandle, memPage))
+        return RC_OK;
+    else    
+        return RC_READ_NON_EXISTING_PAGE;
 }
 
 RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int next = getBlockPos(fHandle) + 1;
-    return readBlock(next, fHandle, memPage);
+    if(RC_OK == readBlock(next, fHandle, memPage)
+        return RC_OK;
+    else
+        return RC_READ_NON_EXISTING_PAGE;
 }
 
 RC readLastBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int last = fHandle->totalNumPages - 1;
-    return readBlock(last, fHandle, memPage);
+    if(RC_OK == readBlock(last, fHandle, memPage))
+        return RC_OK;
+    else
+        return RC_READ_NON_EXISTING_PAGE;
 }
 
 /**
