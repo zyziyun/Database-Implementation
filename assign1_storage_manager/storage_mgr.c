@@ -170,7 +170,7 @@ RC readCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
 
 RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int next = getBlockPos(fHandle) + 1;
-    if(RC_OK == readBlock(next, fHandle, memPage)
+    if(RC_OK == readBlock(next, fHandle, memPage))
         return RC_OK;
     else
         return RC_READ_NON_EXISTING_PAGE;
