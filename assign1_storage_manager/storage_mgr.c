@@ -186,7 +186,7 @@ RC readLastBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
 
 /**
  * @brief writing blocks to a page file
- * 
+ * @details writes a page to disk at absolute position
  * @param pageNum 
  * @param fHandle 
  * @param memPage 
@@ -200,13 +200,18 @@ RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (pageNum < 0 || pageNum > fHandle->totalNumPages) {
         return RC_WRITE_NON_EXISTING_PAGE;
     }
-    FILE *fp = fHandle->mgmtInfo;
+
+    ensureCapacity(pageNum, fHandle);
+    FILE *fp = fopen(fHandle->fileName, "r+");
+
     int fs = fseek(fp, pageNum * PAGE_SIZE, SEEK_SET);
-    int curr = fwrite(memPage, sizeof(char), PAGE_SIZE, fp);
-    if (curr < PAGE_SIZE) {
-        return RC_WRITE_NON_EXISTING_PAGE;
+    if(fs != 0){
+        return RC_WRITE_FAILED;
     }
+    fwrite(memPage, sizeof(char), PAGE_SIZE, fp);
     fHandle->curPagePos = pageNum;
+
+    fclose(fp);
     return RC_OK;
 }
 
@@ -217,43 +222,61 @@ RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
 
 /**
  * @brief append empty block to page, and fill in 0
- * 
+ * @details increases the amount of pages in the file by a page, this page is filled with zero bytes
  * @param fHandle 
  * @return RC 
  */
 RC appendEmptyBlock (SM_FileHandle *fHandle) {
-    FILE *fp = fHandle->mgmtInfo;
+    
+    if(fHandle == NULL){
+        return RC_FILE_HANDLE_NOT_INIT;
+    }
+
+    FILE *fp = fopen(fHandle->fileName,"a+");
+    SM_PageHandle emptyPageAlloc = (SM_PageHandle) calloc(PAGE_SIZE, sizeof(char));
+    
     fseek(fp, 0, SEEK_END);
+    fwrite(emptyPageAlloc, sizeof(char), PAGE_SIZE, fp);
+    free(emptyPageAlloc);
+
     if (ffill(fHandle->mgmtInfo) != PAGE_SIZE) {
         return RC_WRITE_NON_EXISTING_PAGE;
     }
+
     fHandle->totalNumPages += 1;
+    fclose(fp);
     return RC_OK;
 }
 
 /**
  * @brief extend total number page to numberOfPages
- * 
+ * @details checks if the amount if pages in the file is less than numberOfPages if so it appends pages to the file until they are the same amount
+ * @related appendEmptyBlock
  * @param numberOfPages 
  * @param fHandle 
  * @return RC 
  */
 RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle) {
-    int total = fHandle->totalNumPages;
-    if (numberOfPages <= total) {
+
+    FILE *fp = fopen(fHandle->fileName,"a+");
+
+    int total = fHandle->totalNumPages; //Temporariy storing the amount of pages allocated in file
+    if (numberOfPages <= total) {       
         return RC_OK;
     }
+    
     // calc the number of pages to append;
-    int newPageNum = numberOfPages - total;
-    int i = 0;
-    while(i < newPageNum) {
+    //int newPageNum = numberOfPages - total;
+    //int i = 0;
+    while(total < numberOfPages) {
         RC value = appendEmptyBlock(fHandle);
         // if certain page append fail, the whole function is failed
         if (value != RC_OK){
             return value;
         }
-        i += 1;
+        total += 1;
     }
+    fclose(fp);
     return RC_OK;
 }
 
