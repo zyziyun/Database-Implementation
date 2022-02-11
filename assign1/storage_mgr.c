@@ -17,10 +17,16 @@ int fexist(char *fileName) {
     return (access(fileName, 0) == 0);
 }
 
+int initialize = 0;
+
 /* manipulating page files */
 void initStorageManager (void) {
-    printf("storage manager is initializing...\n");
-    printf("storage manager is ready...\n");
+    if (initialize == 0) {
+        initialize = 1;
+        printf("The storage manager have been ready\n");
+    } else {
+        printf("The storage manager initialized, Please do not init repeatedly.\n");
+    }
 }
 
 int ffill(FILE *fp) {

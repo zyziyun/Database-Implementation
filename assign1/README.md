@@ -14,18 +14,18 @@
 # API
 
 ## common function
-1. fsize(): 
-2. fexist():
-3. ffill(): 
+1. fsize():  get the size of page
+2. fexist(): check the file whether exists or not
+3. ffill(): fill single page with '0'
 
 ## interface function
-1. initStorageManager(): init the storage manager
+1. initStorageManager(): init the storage manager.
 2. createPageFile(): create a new page file fileName. The initial file size should be one page.
-3. openPageFile(): 
-4. closePageFile(): 
-5. destroyPageFile():
-6. readBlock(): 
-7. getBlockPos():
+3. openPageFile(): Open the exist page file and initialize the information about fHandle.
+4. closePageFile(): close an open page file and destory fHandle.
+5. destroyPageFile(): remove the page file.
+6. readBlock():  read the blocks in fHandle and store to memPage.
+7. getBlockPos(): Get the current position in the fHandle.
 8. readFirstBlock():
 9. readPrevisousBlock(): 
 10. readCurrentBlock():
