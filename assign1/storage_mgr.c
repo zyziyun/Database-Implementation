@@ -145,14 +145,26 @@ RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
 int getBlockPos (SM_FileHandle *fHandle) {
     return fHandle->curPagePos;
 }
-
+/**
+ * @brief read the first block in fHandle, and store in memPage
+ * 
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC readFirstBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (RC_OK == readBlock(0, fHandle, memPage))
         return RC_OK;
     else
         return RC_READ_NON_EXISTING_PAGE;
 }
-
+/**
+ * @brief read the previous block in fHandle, and store in memPage
+ * @details previous block equals to current position minus 1
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC readPreviousBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int prev = getBlockPos(fHandle) - 1;
     if (RC_OK == readBlock(prev, fHandle, memPage))
@@ -160,14 +172,26 @@ RC readPreviousBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     else    
         return RC_READ_NON_EXISTING_PAGE;
 }
-
+/**
+ * @brief read the current block in fHandle, and store in memPage
+ * 
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC readCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if(RC_OK==readBlock(getBlockPos(fHandle), fHandle, memPage))
         return RC_OK;
     else    
         return RC_READ_NON_EXISTING_PAGE;
 }
-
+/**
+ * @brief read the next block in fHandle, and store in memPage
+ * @details next block equals to current position plus 1
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int next = getBlockPos(fHandle) + 1;
     if(RC_OK == readBlock(next, fHandle, memPage))
@@ -175,7 +199,13 @@ RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     else
         return RC_READ_NON_EXISTING_PAGE;
 }
-
+/**
+ * @brief read the last block in fHandle, and store in memPage
+ * @details lase block equals to totalNumPages minus 1
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC readLastBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int last = fHandle->totalNumPages - 1;
     if(RC_OK == readBlock(last, fHandle, memPage))
