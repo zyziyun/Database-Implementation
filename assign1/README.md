@@ -26,11 +26,11 @@
 5. destroyPageFile(): remove the page file.
 6. readBlock():  read the blocks in fHandle and store to memPage.
 7. getBlockPos(): Get the current position in the fHandle.
-8. readFirstBlock():
-9. readPrevisousBlock(): 
-10. readCurrentBlock():
-11. readNextBlock():
-12. readLastBlock(): 
+8. readFirstBlock(): read the first block in fHandle and store in memPage
+9. readPrevisousBlock(): read the previous block in fHandle and store in memPage
+10. readCurrentBlock():read the current block in fHandle and store in memPage
+11. readNextBlock():read the next block in fHandle and store in memPage
+12. readLastBlock(): read the last block in fHandle and store in memPage
 13. writeBlock():
 14. writeCurrentBlock(): 
 15. appendEmptyBlock():
