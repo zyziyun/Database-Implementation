@@ -20,7 +20,7 @@
 
 ## interface function
 1. initStorageManager(): init the storage manager
-2. createPageFile(): 
+2. createPageFile(): create a new page file fileName. The initial file size should be one page.
 3. openPageFile(): 
 4. closePageFile(): 
 5. destroyPageFile():
