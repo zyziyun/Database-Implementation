@@ -215,6 +215,13 @@ RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
     return RC_OK;
 }
 
+/**
+ * @brief base on the current position in the fHandle to write current block
+ * 
+ * @param fHandle 
+ * @param memPage 
+ * @return RC 
+ */
 RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     return writeBlock(getBlockPos(fHandle), fHandle, memPage);
 }

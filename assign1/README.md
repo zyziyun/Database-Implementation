@@ -14,9 +14,24 @@
 # API
 
 ## common function
-1. fsize: 
+1. fsize(): 
+2. fexist():
+3. ffill(): 
 
 ## interface function
 1. initStorageManager(): init the storage manager
 2. createPageFile(): 
-3. 
+3. openPageFile(): 
+4. closePageFile(): 
+5. destroyPageFile():
+6. readBlock(): 
+7. getBlockPos():
+8. readFirstBlock():
+9. readPrevisousBlock(): 
+10. readCurrentBlock():
+11. readNextBlock():
+12. readLastBlock(): 
+13. writeBlock():
+14. writeCurrentBlock(): 
+15. appendEmptyBlock():
+16. ensureCapacity():
