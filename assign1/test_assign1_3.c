@@ -96,7 +96,8 @@ testSinglePageContent(void)
   // append and test append
   int count = fh.totalNumPages;
   TEST_CHECK(ensureCapacity(4, &fh));
-  ASSERT_TRUE(&fh.totalNumPages == count+3, "expected appending of 3 pages");
+  int updatedCount = fh.totalNumPages;
+  ASSERT_TRUE(updatedCount == count+3, "expected appending of 3 pages");
   TEST_CHECK(readLastBlock(&fh, ph));                                   
   ASSERT_TRUE((fh.curPagePos == (PAGE_SIZE/(count+3))), "expected change of position to last page");
   
