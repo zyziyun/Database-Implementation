@@ -4,7 +4,7 @@
 - Mansoor Syed
 
 # Test Results:
-- Environment: 'Ubuntu 20.0.4 LTS' and 'mac OS 12.1'(gcc version clang-1300.0.29.30)
+- Environment: 'Ubuntu 20.0.4 LTS'(gcc version 9.3.0) and 'mac OS 12.1'(gcc version clang-1300.0.29.30)
 - Pass all tests(100%), function coverage(100%)
 
 # compile and run

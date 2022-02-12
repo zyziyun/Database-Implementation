@@ -6,6 +6,13 @@
 #include "storage_mgr.h"
 #include "dberror.h"
 
+/**
+ * @brief get the size of page
+ * 
+ * @param fp
+ * @return unsigned long 
+ * @author Yun Zi
+ */
 unsigned long fsize(FILE *fp) {
     fseek(fp, 0, SEEK_END);
     unsigned long size = ftell(fp);
@@ -13,22 +20,27 @@ unsigned long fsize(FILE *fp) {
     return size;
 }
 
+/**
+ * @brief check the file whether exists or not
+ * 
+ * @param fileName pointer
+ * @return int 0 is not exist
+ * @author Yun Zi
+ */
 int fexist(char *fileName) {
     return (access(fileName, 0) == 0);
 }
 
 int initialize = 0;
 
-/* manipulating page files */
-void initStorageManager (void) {
-    if (initialize == 0) {
-        initialize = 1;
-        printf("The storage manager have been ready\n");
-    } else {
-        printf("The storage manager initialized, Please do not init repeatedly.\n");
-    }
-}
 
+/**
+ * @brief write fill single page with '0'
+ * 
+ * @param fp 
+ * @return int real size of writing
+ * @author Yun Zi
+ */
 int ffill(FILE *fp) {
     // initial file size one page
     char *buffer = (char*)malloc(PAGE_SIZE * sizeof(char));
@@ -41,11 +53,24 @@ int ffill(FILE *fp) {
 }
 
 /**
+ * @brief init the storage manager
+ * @author Yun Zi
+ */
+void initStorageManager (void) {
+    if (initialize == 0) {
+        initialize = 1;
+        printf("The storage manager have been ready\n");
+    } else {
+        printf("The storage manager initialized, Please do not init repeatedly.\n");
+    }
+}
+
+/**
  * @brief Create a new page File
  * 
  * @param fileName 
  * @return RC
- * @author Yun Xi
+ * @author Yun Zi
  */
 RC createPageFile (char *fileName) {
     // use w+ mode to create file
@@ -64,7 +89,7 @@ RC createPageFile (char *fileName) {
  * @param fileName 
  * @param fHandle 
  * @return RC 
- * @author Yun Xi
+ * @author Yun Zi
  */
 RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
     // check file exist
@@ -89,7 +114,7 @@ RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
  * 
  * @param fHandle 
  * @return RC 
- * @author Yun Xi
+ * @author Yun Zi
  */
 RC closePageFile (SM_FileHandle *fHandle) {
     FILE *fp = (FILE*)fHandle->mgmtInfo;
@@ -110,7 +135,7 @@ RC closePageFile (SM_FileHandle *fHandle) {
  * 
  * @param fileName 
  * @return RC 
- * @author Yun Xi
+ * @author Yun Zi
  */
 RC destroyPageFile (char *fileName) {
     if (remove(fileName) != 0) {
@@ -126,7 +151,7 @@ RC destroyPageFile (char *fileName) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
- * @author Yun Xi 
+ * @author Yun Zi 
  */
 RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (fHandle == NULL || fHandle->mgmtInfo == NULL) {
