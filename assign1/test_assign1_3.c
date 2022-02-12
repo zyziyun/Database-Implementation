@@ -94,8 +94,8 @@ testSinglePageContent(void)
   printf("reading first block\n");
   
   // append and test append
-  int count = fh->totalNumPages;
-  TEST_CHECK(ensureCapacity(4, fh));
+  int count = &fh->totalNumPages;
+  TEST_CHECK(ensureCapacity(4, &fh));
   ASSERT_TRUE(fh->totalNumPages == count+3);
   TEST_CHECK(readLastBlock(&fh, ph));                                   
   ASSERT_TRUE((fh.curPagePos == (PAGE_SIZE/(count+3)));
