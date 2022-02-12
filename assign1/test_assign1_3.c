@@ -94,11 +94,11 @@ testSinglePageContent(void)
   printf("reading first block\n");
   
   // append and test append
-  int count = &fh->totalNumPages;
+  int count = fh.totalNumPages;
   TEST_CHECK(ensureCapacity(4, &fh));
-  ASSERT_TRUE(fh->totalNumPages == count+3);
+  ASSERT_TRUE(fh->totalNumPages == count+3, "expected appending of 3 pages");
   TEST_CHECK(readLastBlock(&fh, ph));                                   
-  ASSERT_TRUE((fh.curPagePos == (PAGE_SIZE/(count+3)));
+  ASSERT_TRUE((fh.curPagePos == (PAGE_SIZE/(count+3))), "expected change of position to last page");
   
   // destroy new page file
   TEST_CHECK(destroyPageFile (TESTPF));  
