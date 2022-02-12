@@ -1,7 +1,7 @@
 # Assignment1 - CS525_S22_GROUP24
 - Yun Zi
 - MingXi Xia
-- NoodleV4
+- Mansoor Syed
 
 # Test Results:
 - Environment: 'Ubuntu 20.0.4 LTS' and 'mac OS 12.1'(gcc version clang-1300.0.29.30)
