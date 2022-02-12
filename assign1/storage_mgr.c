@@ -45,6 +45,7 @@ int ffill(FILE *fp) {
  * 
  * @param fileName 
  * @return RC
+ * @author Yun Xi
  */
 RC createPageFile (char *fileName) {
     // use w+ mode to create file
@@ -63,6 +64,7 @@ RC createPageFile (char *fileName) {
  * @param fileName 
  * @param fHandle 
  * @return RC 
+ * @author Yun Xi
  */
 RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
     // check file exist
@@ -87,6 +89,7 @@ RC openPageFile (char *fileName, SM_FileHandle *fHandle) {
  * 
  * @param fHandle 
  * @return RC 
+ * @author Yun Xi
  */
 RC closePageFile (SM_FileHandle *fHandle) {
     FILE *fp = (FILE*)fHandle->mgmtInfo;
@@ -107,6 +110,7 @@ RC closePageFile (SM_FileHandle *fHandle) {
  * 
  * @param fileName 
  * @return RC 
+ * @author Yun Xi
  */
 RC destroyPageFile (char *fileName) {
     if (remove(fileName) != 0) {
@@ -122,6 +126,7 @@ RC destroyPageFile (char *fileName) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author Yun Xi 
  */
 RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (fHandle == NULL || fHandle->mgmtInfo == NULL) {
@@ -147,6 +152,7 @@ RC readBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * 
  * @param fHandle 
  * @return int 
+ * @author Yun Zi
  */
 int getBlockPos (SM_FileHandle *fHandle) {
     return fHandle->curPagePos;
@@ -157,6 +163,7 @@ int getBlockPos (SM_FileHandle *fHandle) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author MingXi Xia
  */
 RC readFirstBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (RC_OK == readBlock(0, fHandle, memPage))
@@ -170,6 +177,7 @@ RC readFirstBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author MingXi Xia
  */
 RC readPreviousBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int prev = getBlockPos(fHandle) - 1;
@@ -184,6 +192,7 @@ RC readPreviousBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author MingXi Xia
  */
 RC readCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if(RC_OK==readBlock(getBlockPos(fHandle), fHandle, memPage))
@@ -197,6 +206,7 @@ RC readCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author MingXi Xia
  */
 RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int next = getBlockPos(fHandle) + 1;
@@ -211,6 +221,7 @@ RC readNextBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author MingXi Xia
  */
 RC readLastBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     int last = fHandle->totalNumPages - 1;
@@ -227,6 +238,7 @@ RC readLastBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author Mansoor Syed
  */
 RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
     if (fHandle == NULL || fHandle->mgmtInfo == NULL) {
@@ -257,6 +269,7 @@ RC writeBlock (int pageNum, SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @param fHandle 
  * @param memPage 
  * @return RC 
+ * @author Mansoor Syed
  */
 RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
     return writeBlock(getBlockPos(fHandle), fHandle, memPage);
@@ -268,6 +281,7 @@ RC writeCurrentBlock (SM_FileHandle *fHandle, SM_PageHandle memPage) {
  * @details increases the amount of pages in the file by a page, this page is filled with zero bytes
  * @param fHandle 
  * @return RC 
+ * @author Mansoor Syed
  */
 RC appendEmptyBlock (SM_FileHandle *fHandle) {
     if(fHandle == NULL){
@@ -297,6 +311,7 @@ RC appendEmptyBlock (SM_FileHandle *fHandle) {
  * @param numberOfPages 
  * @param fHandle 
  * @return RC 
+ * @author Mansoor Syed
  */
 RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle) {
 
