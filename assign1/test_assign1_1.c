@@ -92,7 +92,13 @@ testSinglePageContent(void)
   for (i=0; i < PAGE_SIZE; i++)
     ASSERT_TRUE((ph[i] == (i % 10) + '0'), "character in page read from disk is the one we expected.");
   printf("reading first block\n");
-
+  
+  // append and test append
+  int count = fh.totalNumPages;
+  TEST_CHECK(ensureCapacity(4, &fh));
+  int updatedCount = fh.totalNumPages;
+  ASSERT_TRUE(updatedCount == count+3, "expected appending of 3 pages");                                  
+  ASSERT_TRUE((fh.curPagePos == 0), "expected no changes of position:"  );
   // destroy new page file
   TEST_CHECK(destroyPageFile (TESTPF));  
   
