@@ -83,22 +83,47 @@ testSinglePageContent(void)
     
   // change ph to be a string and write that one to disk
   for (i=0; i < PAGE_SIZE; i++)
-    ph[i] = (i % 10) + '0';
+    ph[i] = 'A';
   TEST_CHECK(writeBlock (0, &fh, ph));
-  printf("writing first block\n");
+  printf("writing A block\n");
 
-  // read back the page containing the string and check that it is correct
+  //write second block to disk
+  for (i=0; i < PAGE_SIZE; i++)
+    ph[i] = 'B';
+  TEST_CHECK(writeBlock (1, &fh, ph));
+  printf("writing B block\n");
+
+    //read page 2
+  TEST_CHECK(readBlock (1,&fh, ph));
+  for (i=0; i < PAGE_SIZE; i++)
+    ASSERT_TRUE((ph[i] == 'B'), "character B in page 2 read from disk is the one we expected.");
+  printf("reading page 2\n");
+
+  // read page 1
   TEST_CHECK(readFirstBlock (&fh, ph));
   for (i=0; i < PAGE_SIZE; i++)
-    ASSERT_TRUE((ph[i] == (i % 10) + '0'), "character in page read from disk is the one we expected.");
-  printf("reading first block\n");
-  
-  // append and test append
-  int count = fh.totalNumPages;
-  TEST_CHECK(ensureCapacity(4, &fh));
-  int updatedCount = fh.totalNumPages;
-  ASSERT_TRUE(updatedCount == count+3, "expected appending of 3 pages");                                  
-  ASSERT_TRUE((fh.curPagePos == 0), "expected no changes of position:"  );
+    ASSERT_TRUE((ph[i] == 'A'), "character A in page 1 read from disk is the one we expected.");
+  printf("reading first page 1\n");
+
+ //read the next page
+  TEST_CHECK(readNextBlock (&fh, ph));
+  printf("reading page 2\n");
+
+  //read current page
+  TEST_CHECK(readCurrentBlock (&fh, ph));
+  for (i=0; i < PAGE_SIZE; i++)
+    ASSERT_TRUE((ph[i] == 'B'), "character B in page  2 read from disk is the one we expected.");
+  printf("reading current page 2 again\n");
+
+  //read the previous block
+  TEST_CHECK(readPreviousBlock (&fh, ph));
+  printf("reading previous page 1 \n");
+
+   //read the last block
+  TEST_CHECK(readLastBlock (&fh, ph));
+  printf("reading last page 2 \n");
+
+
   // destroy new page file
   TEST_CHECK(destroyPageFile (TESTPF));  
   
