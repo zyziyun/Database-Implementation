@@ -31,7 +31,7 @@
 10. readCurrentBlock():read the current block in fHandle and store in memPage
 11. readNextBlock():read the next block in fHandle and store in memPage
 12. readLastBlock(): read the last block in fHandle and store in memPage
-13. writeBlock():
-14. writeCurrentBlock(): 
-15. appendEmptyBlock():
-16. ensureCapacity():
+13. writeBlock(): write to the selected page in fHandle from memPage
+14. writeCurrentBlock(): write to the current page in fHandle from memPage
+15. appendEmptyBlock(): appends an empty page to the end of the file
+16. ensureCapacity(): checks if provided page count equals file page count and appends needed pages
