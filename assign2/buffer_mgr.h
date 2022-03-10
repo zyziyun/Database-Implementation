@@ -1,11 +1,12 @@
 #ifndef BUFFER_MANAGER_H
 #define BUFFER_MANAGER_H
 
+#include <pthread.h>
 // Include return codes and methods for logging errors
 #include "dberror.h"
-
 // Include bool DT
 #include "dt.h"
+#include "storage_mgr.h"
 
 // Replacement Strategies
 typedef enum ReplacementStrategy {
@@ -33,12 +34,49 @@ typedef struct BM_PageHandle {
 	char *data;
 } BM_PageHandle;
 
+typedef struct BM_Frame {
+	bool dirtyflag;
+	int frameNum ; // current frame page size in list
+	int timestamp; // for LRU replacement strategy
+	int fixCount; // pin counter
+	int refCount; // for LFU replacement strategy
+
+	struct BM_Frame *prev;
+	struct BM_Frame *next;
+} BM_Frame;
+
+typedef struct BM_FrameList {
+	BM_Frame *head;
+	BM_Frame *tail;
+} BM_FrameList;
+
+typedef struct BM_MgmtData {
+	int totalSize; // buffer pool size
+	int readCount;
+	int writeCount;
+	BM_FrameList *frameList;
+	void *stratData;
+	pthread_mutex_t fmutex;// make the buffer pool thread safe
+} BM_MgmtData;
+
 // convenience macros
 #define MAKE_POOL()					\
 		((BM_BufferPool *) malloc (sizeof(BM_BufferPool)))
 
 #define MAKE_PAGE_HANDLE()				\
 		((BM_PageHandle *) malloc (sizeof(BM_PageHandle)))
+
+#define MAKE_MGMT_DATA()					\
+		((BM_MgmtData *) malloc(sizeof(BM_MgmtData)))
+
+#define MAKE_FH_HANDLE() \
+		((SM_FileHandle *) malloc(sizeof(SM_FileHandle)))
+
+#define MAKE_FRAME_LIST() \
+		((BM_FrameList *) malloc(sizeof(BM_FrameList)))
+
+#define MAKE_FRAME() \
+		((BM_Frame *) malloc(sizeof(BM_Frame)))
 
 // Buffer Manager Interface Pool Handling
 RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName, 
