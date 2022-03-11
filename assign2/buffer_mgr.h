@@ -62,6 +62,8 @@ typedef struct BM_MgmtData {
 	pthread_mutex_t fmutex;// make the buffer pool thread safe
 } BM_MgmtData;
 
+typedef BM_Frame *(*handlers_t)(BM_FrameList *frameList, BM_MgmtData *mgmt);
+
 // convenience macros
 #define MAKE_POOL()					\
 		((BM_BufferPool *) malloc (sizeof(BM_BufferPool)))
@@ -85,11 +87,11 @@ typedef struct BM_MgmtData {
 		((SM_PageHandle) malloc(sizeof(PAGE_SIZE)))
 
 //Replacement Strategy
-BM_Frame *pinPageLRU(BM_FrameList *frameList);
-BM_Frame *pinPageLRUK(BM_FrameList *frameList);
-BM_Frame *pinPageLFU(BM_FrameList *frameList);
-BM_Frame *pinPageFIFO(BM_FrameList *frameList);
-BM_Frame *pinPageCLOCK(BM_FrameList *frameList);
+BM_Frame *pinPageLRU(BM_FrameList *, BM_MgmtData *);
+BM_Frame *pinPageLRUK(BM_FrameList *, BM_MgmtData *);
+BM_Frame *pinPageLFU(BM_FrameList *, BM_MgmtData *);
+BM_Frame *pinPageFIFO(BM_FrameList *, BM_MgmtData *);
+BM_Frame *pinPageCLOCK(BM_FrameList *, BM_MgmtData *);
 
 
 // Buffer Manager Interface Pool Handling

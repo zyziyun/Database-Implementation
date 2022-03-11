@@ -6,6 +6,13 @@
 #include "dberror.h"
 #include "dt.h"
 
+static handlers_t handlers[5] = {
+    pinPageFIFO,
+    pinPageLRU,
+    pinPageLFU,
+    pinPageCLOCK,
+    pinPageLRUK,
+};
 
 int getTimeStamp() {
     time_t now;
@@ -177,7 +184,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     }
     // replace algorithm
     if (!frame) {
-        
+        frame = handlers[bm->strategy](mgmt->frameList, mgmt);
     }
     if (!frame) {
         return RC_FAIL;
@@ -195,20 +202,20 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
 }
 //Replacement Strategy
 //LRU implementation
-BM_Frame *pinPageLRU(BM_FrameList *frameList){
+BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
 
-BM_Frame *pinPageLRUK(BM_FrameList *frameList){
+BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
-BM_Frame *pinPageLFU(BM_FrameList *frameList){
+BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
-BM_Frame *pinPageFIFO(BM_FrameList *frameList){
+BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
-BM_Frame *pinPageCLOCK(BM_FrameList *frameList){
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
 
