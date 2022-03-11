@@ -301,50 +301,52 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
 // Statistics Interface
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
-    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
-    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    BM_Frame *curr = mgmt->frameList->head;
-    int counter = 0;
-    while (curr) {
-        ret[counter] = curr->pageNum;
-        curr = curr->next;
-        counter++;
+    
+    PageNumber *arrayPageNumbers = (PageNumber*)malloc(bm->numPages * sizeof(PageNumber)); 
+    BM_Frame *frameData = bm->mgmtData;
+
+    for(int i = 0; i < (bm->numPages); i++){
+        if((frameData[i].data) == NULL){
+            arrayPageNumbers[i] = NO_PAGE;
+        }
+        else {
+            arrayPageNumbers[i] = frameData[i].pageNum;
+        }
     }
-    return (PageNumber *)ret;
+    return arrayPageNumbers;
+    
 }
 
 bool *getDirtyFlags (BM_BufferPool *const bm) {
-    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
-    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    BM_Frame *curr = mgmt->frameList->head;
-    int counter = 0;
-    while (curr) {
-        ret[counter] = curr->dirtyflag;
-        curr = curr->next;
-        counter++;
+    bool *arrayOfBools = (bool*)malloc(bm->numPages * sizeof(bool));
+    BM_Frame *frameData = bm->mgmtData;
+    for(int i = 0; i < (bm->numPages); i++){
+        arrayOfBools[i] = (bool)frameData->dirtyflag;
     }
-    return (bool *)ret;
+    return arrayOfBools;
 }
 
 int *getFixCounts (BM_BufferPool *const bm) {
-    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
-    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    BM_Frame *curr = mgmt->frameList->head;
-    int counter = 0;
-    while (curr) {
-        ret[counter] = curr->fixCount;
-        curr = curr->next;
-        counter++;
+    int *arrayOfInts = (int*)malloc(bm->numPages * sizeof(int));
+    BM_Frame *frameData = bm->mgmtData;
+
+    for(int i = 0; i < (bm->numPages); i++){
+        arrayOfInts[i] = (int)frameData->fixCount;
     }
-    return ret;
+
+    return arrayOfInts;
 }
 
 int getNumReadIO (BM_BufferPool *const bm) {
-    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    return mgmt->readCount + 1;
+    
+    BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;
+    return (data->readCount);
+
 }
 
 int getNumWriteIO (BM_BufferPool *const bm) {
-    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    return mgmt->writeCount + 1;
+
+    BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;
+    return (data->writeCount);
+
 }
