@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <time.h>
 #include "storage_mgr.h"
 #include "buffer_mgr.h"
@@ -94,6 +95,7 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     mgmt->writeCount = 0;
     mgmt->totalSize = numPages;
     mgmt->stratData = stratData;
+    pthread_mutex_init(&(mgmt->mutexlock), NULL);
     bm->mgmtData = mgmt;
     return RC_OK;
 }
@@ -160,7 +162,7 @@ RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
         return RC_FAIL;
     }
     curr->fixCount -= 1;
-    return RC_OK;    
+    return RC_OK;
 }
 
 RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
@@ -182,7 +184,7 @@ RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
 BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *frame = NULL;
-    BM_PINPAGE *bm_pinpage;
+    BM_PINPAGE *bm_pinpage = (BM_PINPAGE *) malloc(sizeof(BM_PINPAGE));
     // find pageNum frame
     frame = getFrameByNum(mgmt->frameList, pageNum);
     if (frame) {
@@ -204,6 +206,8 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
         bm_pinpage->frame = frame;
         return bm_pinpage;
     }
+    free(bm_pinpage);
+    bm_pinpage = NULL;
     return NULL;
 }
 
@@ -214,16 +218,21 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     BM_PINPAGE *bm_pinpage;
     BM_Frame *frame = NULL;
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    
+    pthread_mutex_lock(&mgmt->mutexlock);
     bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
     }
     frame = bm_pinpage->frame;
     if (bm_pinpage->status == PIN_EMPTY) {
-        bm_pinpage->frame = MAKE_FRAME();
-    }
-    if (bm_pinpage->status == PIN_REPLACE) {
+        frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
+    } else if (bm_pinpage->status == PIN_REPLACE) {
+        if (frame->dirtyflag) {
+            forceWriteSingle(frame, mgmt);
+        }
+        free(frame->data);
+        frame->data = NULL;
+        frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
         frame->dirtyflag = FALSE;
         frame->fixCount = 0;
         frame->refCount = 0;
@@ -236,9 +245,12 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     frame->refCount += 1;
     mgmt->readCount += 1;
     if (page) {
-        page->data = frame->data;
+        page->data = (char *)frame->data;
         page->pageNum = pageNum;
     }
+    free(bm_pinpage);
+    bm_pinpage = NULL;
+    pthread_mutex_unlock(&mgmt->mutexlock);
     return RC_OK;    
 }
 //Replacement Strategy
@@ -254,7 +266,17 @@ BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
+    BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
+    int min = curr->timestamp;
+    while (curr) {
+        if (curr->timestamp < min) {
+            min = curr->timestamp;
+            ret = curr;
+        }
+        curr = curr->next;
+    }
+    return ret;
 }
 BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
@@ -274,9 +296,11 @@ int *getFixCounts (BM_BufferPool *const bm) {
 }
 
 int getNumReadIO (BM_BufferPool *const bm) {
-    return 0;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    return mgmt->readCount + 1;
 }
 
 int getNumWriteIO (BM_BufferPool *const bm) {
-    return 0;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    return mgmt->writeCount + 1;
 }

@@ -59,7 +59,7 @@ typedef struct BM_MgmtData {
 	SM_FileHandle *fh;
 	BM_FrameList *frameList;
 	void *stratData;
-	pthread_mutex_t fmutex;// make the buffer pool thread safe
+	pthread_mutex_t mutexlock;// make the buffer pool thread safe
 } BM_MgmtData;
 
 typedef struct BM_PINPAGE {
@@ -93,7 +93,7 @@ typedef BM_Frame *(*handlers_t)(BM_FrameList *frameList, BM_MgmtData *mgmt);
 		((BM_Frame *) malloc(sizeof(BM_Frame)))
 
 #define MAKE_MEMPAGE() \
-		((SM_PageHandle) malloc(sizeof(PAGE_SIZE)))
+		((SM_PageHandle *) malloc(sizeof(SM_PageHandle)))
 
 //Replacement Strategy
 BM_Frame *pinPageLRU(BM_FrameList *, BM_MgmtData *);
