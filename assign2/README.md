@@ -17,5 +17,5 @@
 ## common function
 1. 
 
-## interface function
+## main function
 1. 

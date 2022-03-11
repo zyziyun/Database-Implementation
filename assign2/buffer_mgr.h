@@ -41,6 +41,7 @@ typedef struct BM_Frame {
 	int fixCount; // pin counter
 	int refCount; // for LFU replacement strategy
 
+	BM_PageHandle *page;
 	struct BM_Frame *prev;
 	struct BM_Frame *next;
 } BM_Frame;
@@ -54,6 +55,7 @@ typedef struct BM_MgmtData {
 	int totalSize; // buffer pool size
 	int readCount;
 	int writeCount;
+	SM_FileHandle *fh;
 	BM_FrameList *frameList;
 	void *stratData;
 	pthread_mutex_t fmutex;// make the buffer pool thread safe
