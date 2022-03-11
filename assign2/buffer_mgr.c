@@ -114,12 +114,14 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
     return RC_OK;
 }
 
-
+void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
+    writeBlock(frame->pageNum, mgmt->fh, frame->data);
+    frame->dirtyflag = FALSE;
+    mgmt->writeCount += 1;
+}
 int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     if (frame->fixCount == 0 && frame->dirtyflag) {
-        writeBlock(frame->pageNum, mgmt->fh, frame->data);
-        frame->dirtyflag = FALSE;
-        mgmt->writeCount += 1;
+        forceWriteSingle(frame, mgmt);
     }
     return 0;
 }
@@ -162,7 +164,12 @@ RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
 }
 
 RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
-    return RC_OK;    
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *frame = getFrameByNum(mgmt->frameList, page->pageNum);
+    if (frame) {
+        forceWriteSingle(frame, mgmt);
+    }
+    return RC_OK;
 }
 
 RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
@@ -172,32 +179,66 @@ RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
     return RC_OK;
 }
 
-RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
-		const PageNumber pageNum) {
-    BM_Frame *frame = NULL;
+BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *frame = NULL;
+    BM_PINPAGE *bm_pinpage;
     // find pageNum frame
     frame = getFrameByNum(mgmt->frameList, pageNum);
+    if (frame) {
+        bm_pinpage->status = PIN_EXIST;
+        bm_pinpage->frame = frame;
+        return bm_pinpage;
+    }
     // find empty frame
-    if (!frame) {
-        frame = (BM_Frame *)traverseFrameList(mgmt->frameList, mgmt, getAndCheckEmptyPage);
+    frame = (BM_Frame *)traverseFrameList(mgmt->frameList, mgmt, getAndCheckEmptyPage);
+    if (frame) {
+        bm_pinpage->status = PIN_EMPTY;
+        bm_pinpage->frame = frame;
+        return bm_pinpage;
     }
     // replace algorithm
-    if (!frame) {
-        frame = handlers[bm->strategy](mgmt->frameList, mgmt);
+    frame = handlers[bm->strategy](mgmt->frameList, mgmt);
+    if (frame) {
+        bm_pinpage->status = PIN_REPLACE;
+        bm_pinpage->frame = frame;
+        return bm_pinpage;
     }
-    if (!frame) {
+    return NULL;
+}
+
+RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
+		const PageNumber pageNum) {
+    int status = 0;
+
+    BM_PINPAGE *bm_pinpage;
+    BM_Frame *frame = NULL;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    
+    bm_pinpage = pinFindFrame(bm, pageNum);
+    if (!bm_pinpage) {
         return RC_FAIL;
     }
-    frame->data = MAKE_MEMPAGE();
+    frame = bm_pinpage->frame;
+    if (bm_pinpage->status == PIN_EMPTY) {
+        bm_pinpage->frame = MAKE_FRAME();
+    }
+    if (bm_pinpage->status == PIN_REPLACE) {
+        frame->dirtyflag = FALSE;
+        frame->fixCount = 0;
+        frame->refCount = 0;
+    }
     ensureCapacity(pageNum, mgmt->fh);
     readBlock(pageNum, mgmt->fh, frame->data);
-    frame->dirtyflag = FALSE;
     frame->pageNum = pageNum;
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
     mgmt->readCount += 1;
+    if (page) {
+        page->data = frame->data;
+        page->pageNum = pageNum;
+    }
     return RC_OK;    
 }
 //Replacement Strategy
@@ -221,7 +262,7 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
 // Statistics Interface
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
-    return 0;    
+    return 0;
 }
 
 bool *getDirtyFlags (BM_BufferPool *const bm) {

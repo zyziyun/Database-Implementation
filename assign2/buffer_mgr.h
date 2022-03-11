@@ -62,7 +62,16 @@ typedef struct BM_MgmtData {
 	pthread_mutex_t fmutex;// make the buffer pool thread safe
 } BM_MgmtData;
 
+typedef struct BM_PINPAGE {
+    int status;
+    BM_Frame *frame;
+} BM_PINPAGE;
+
 typedef BM_Frame *(*handlers_t)(BM_FrameList *frameList, BM_MgmtData *mgmt);
+
+#define PIN_EMPTY 0
+#define PIN_REPLACE 1
+#define PIN_EXIST 2
 
 // convenience macros
 #define MAKE_POOL()					\
