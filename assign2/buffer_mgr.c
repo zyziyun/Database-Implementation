@@ -193,7 +193,24 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     mgmt->readCount += 1;
     return RC_OK;    
 }
+//Replacement Strategy
+//LRU implementation
+BM_Frame *pinPageLRU(BM_FrameList *frameList){
+    return frameList->head;
+}
 
+BM_Frame *pinPageLRUK(BM_FrameList *frameList){
+    return frameList->head;
+}
+BM_Frame *pinPageLFU(BM_FrameList *frameList){
+    return frameList->head;
+}
+BM_Frame *pinPageFIFO(BM_FrameList *frameList){
+    return frameList->head;
+}
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList){
+    return frameList->head;
+}
 
 // Statistics Interface
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
