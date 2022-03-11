@@ -228,26 +228,26 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     if (!bm_pinpage) {
         return RC_FAIL;
     }
+    printf("%i", bm_pinpage->status);
     frame = bm_pinpage->frame;
-    if (bm_pinpage->status == PIN_EMPTY) {
-        frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
-        ensureCapacity(pageNum, mgmt->fh);
-        readBlock(pageNum, mgmt->fh, frame->data);
-        frame->pageNum = pageNum;
-    } else if (bm_pinpage->status == PIN_REPLACE) {
+    if (bm_pinpage->status == PIN_REPLACE) {
         if (frame->dirtyflag) {
             forceWriteSingle(frame, mgmt);
         }
+        // printf("\n111%s==", frame->data);
         free(frame->data);
         frame->data = NULL;
-        frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
         frame->dirtyflag = FALSE;
         frame->fixCount = 0;
         frame->refCount = 0;
+    }
+    if (bm_pinpage->status != PIN_EXIST) {
+        frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
         ensureCapacity(pageNum, mgmt->fh);
         readBlock(pageNum, mgmt->fh, frame->data);
         frame->pageNum = pageNum;
     }
+    // printf("==%s==\n", frame->data);
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
