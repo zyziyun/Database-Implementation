@@ -315,7 +315,7 @@ RC appendEmptyBlock (SM_FileHandle *fHandle) {
 
     FILE *fp = fopen(fHandle->fileName,"a+");
     SM_PageHandle emptyPageAlloc = (SM_PageHandle) calloc(PAGE_SIZE, sizeof(char));
-    
+
     fseek(fp, 0, SEEK_END);
     fwrite(emptyPageAlloc, sizeof(char), PAGE_SIZE, fp);
     free(emptyPageAlloc);
@@ -339,17 +339,10 @@ RC appendEmptyBlock (SM_FileHandle *fHandle) {
  * @author Mansoor Syed
  */
 RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle) {
-
-    FILE *fp = fopen(fHandle->fileName,"a+");
-
     int total = fHandle->totalNumPages; //Temporariy storing the amount of pages allocated in file
     if (numberOfPages <= total) {       
         return RC_OK;
     }
-    
-    // calc the number of pages to append;
-    //int newPageNum = numberOfPages - total;
-    //int i = 0;
     while(total < numberOfPages) {
         RC value = appendEmptyBlock(fHandle);
         // if certain page append fail, the whole function is failed
@@ -358,7 +351,6 @@ RC ensureCapacity (int numberOfPages, SM_FileHandle *fHandle) {
         }
         total += 1;
     }
-    fclose(fp);
     return RC_OK;
 }
 

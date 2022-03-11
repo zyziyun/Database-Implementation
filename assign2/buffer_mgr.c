@@ -64,10 +64,10 @@ BM_FrameList *initFrameList(int num) {
     int i;
     BM_Frame *curr;
     BM_FrameList *frameList = MAKE_FRAME_LIST();
-    frameList->head = curr = frameList->tail = initFrame(0);
+    frameList->head = curr = frameList->tail = initFrame();
 
     for (i = 1; i < num; i++) {
-        curr->next = initFrame(i);
+        curr->next = initFrame();
         curr->next->prev = curr;
         frameList->tail = curr = curr->next;
     }
@@ -85,10 +85,7 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     BM_MgmtData * mgmt = MAKE_MGMT_DATA();
 
     mgmt->fh = MAKE_FH_HANDLE();
-    RC status = openPageFile(bm->pageFile, mgmt->fh);
-    if (status != RC_OK) {
-        return status;
-    }
+    openPageFile(bm->pageFile, mgmt->fh);
 
     mgmt->frameList = initFrameList(numPages);
     mgmt->readCount = 0;
@@ -219,35 +216,58 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
 
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
-    int status = 0;
-
-    BM_PINPAGE *bm_pinpage;
-    BM_Frame *frame = NULL;
+    
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    bm_pinpage = pinFindFrame(bm, pageNum);
+    pthread_mutex_lock(&mgmt->mutexlock);
+    BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
     }
-    printf("%i", bm_pinpage->status);
-    frame = bm_pinpage->frame;
+    BM_Frame *frame = bm_pinpage->frame;
+    // printf("\nstatus: %i, data: %s, framePageNum: %i", bm_pinpage->status, frame->data, frame->pageNum);
     if (bm_pinpage->status == PIN_REPLACE) {
+        BM_Frame *newFrame = initFrame();
+        newFrame->data = (SM_PageHandle) malloc(PAGE_SIZE);
+        if (!mgmt->fh) {
+            mgmt->fh = MAKE_FH_HANDLE();
+            openPageFile(bm->pageFile, mgmt->fh);
+        }
+        ensureCapacity(pageNum, mgmt->fh);
+        readBlock(pageNum, mgmt->fh, newFrame->data);
+        newFrame->pageNum = pageNum;
+
+        // printf("\nnewdata: %s, newpageNum: %i, framedata: %s, framepageNum: %i\n", 
+        //     newFrame->data, 
+        //     newFrame->pageNum, 
+        //     frame->data, 
+        //     frame->pageNum
+        // );
+
         if (frame->dirtyflag) {
             forceWriteSingle(frame, mgmt);
         }
-        // printf("\n111%s==", frame->data);
+        if (frame->prev) {
+            frame->prev->next = newFrame;
+        } else {
+            mgmt->frameList->head = newFrame;
+        }
+        if (frame->next) {
+            frame->next->prev = newFrame;
+        } else {
+            mgmt->frameList->tail = newFrame;
+        }
+        newFrame->next = frame->next;
         free(frame->data);
         frame->data = NULL;
-        frame->dirtyflag = FALSE;
-        frame->fixCount = 0;
-        frame->refCount = 0;
+        free(frame);
+        frame = newFrame;
     }
-    if (bm_pinpage->status != PIN_EXIST) {
+    if (bm_pinpage->status == PIN_EMPTY) {
         frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
         ensureCapacity(pageNum, mgmt->fh);
         readBlock(pageNum, mgmt->fh, frame->data);
         frame->pageNum = pageNum;
     }
-    // printf("==%s==\n", frame->data);
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
@@ -258,6 +278,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     }
     free(bm_pinpage);
     bm_pinpage = NULL;
+    pthread_mutex_unlock(&mgmt->mutexlock);
     return RC_OK;    
 }
 //Replacement Strategy
