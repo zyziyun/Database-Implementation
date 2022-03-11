@@ -36,12 +36,13 @@ typedef struct BM_PageHandle {
 
 typedef struct BM_Frame {
 	bool dirtyflag;
-	int frameNum ; // current frame page size in list
+	PageNumber pageNum; // current frame page size in list
+	SM_PageHandle data;
+
 	int timestamp; // for LRU replacement strategy
 	int fixCount; // pin counter
 	int refCount; // for LFU replacement strategy
 
-	BM_PageHandle *page;
 	struct BM_Frame *prev;
 	struct BM_Frame *next;
 } BM_Frame;
@@ -79,6 +80,12 @@ typedef struct BM_MgmtData {
 
 #define MAKE_FRAME() \
 		((BM_Frame *) malloc(sizeof(BM_Frame)))
+
+#define MAKE_MEMPAGE() \
+		((SM_PageHandle) malloc(sizeof(PAGE_SIZE)))
+
+
+
 
 // Buffer Manager Interface Pool Handling
 RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName, 

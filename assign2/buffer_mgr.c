@@ -13,7 +13,7 @@ int getTimeStamp() {
     return time(&now);
 }
 
-void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, int (*callback)(BM_Frame*, BM_MgmtData*)) {
+void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, RC (*callback)(BM_Frame*, BM_MgmtData*)) {
     BM_Frame *curr = frameList->head;
     while (curr) {
         int status = callback(curr, mgmt);
@@ -25,14 +25,14 @@ void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, int (*callba
     return NULL;
 }
 
-BM_Frame *initFrame(int num) {
+BM_Frame *initFrame() {
     BM_Frame *frame = MAKE_FRAME();
     frame->dirtyflag = FALSE;
     frame->fixCount = 0;
-    frame->frameNum = num;
     frame->refCount = 0;
-    frame->timestamp = getTimeStamp();
-    frame->page = MAKE_PAGE_HANDLE();
+    frame->timestamp = 0;
+    frame->data = NULL;
+    frame->pageNum = NO_PAGE;
     frame->next = NULL;
     frame->prev = NULL;
     return frame;
@@ -41,9 +41,8 @@ BM_Frame *initFrame(int num) {
 void destoryFrameList(BM_FrameList *frameList) {
     BM_Frame *curr = frameList->head;
     while (curr) {
-        curr->page = NULL;
         curr->prev = NULL;
-        free(curr->page);
+        free(curr->data);
         free(curr);
         curr = curr->next;
         frameList->head = curr;
@@ -58,6 +57,7 @@ BM_FrameList *initFrameList(int num) {
     BM_Frame *curr;
     BM_FrameList *frameList = MAKE_FRAME_LIST();
     frameList->head = curr = frameList->tail = initFrame(0);
+
     for (i = 1; i < num; i++) {
         curr->next = initFrame(i);
         curr->next->prev = curr;
@@ -70,6 +70,7 @@ BM_FrameList *initFrameList(int num) {
 RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName, 
 		const int numPages, ReplacementStrategy strategy,
 		void *stratData) {
+
     bm->pageFile = (char *)pageFileName;
     bm->numPages = numPages;
     bm->strategy = strategy;
@@ -80,6 +81,7 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     if (status != RC_OK) {
         return status;
     }
+
     mgmt->frameList = initFrameList(numPages);
     mgmt->readCount = 0;
     mgmt->writeCount = 0;
@@ -108,7 +110,7 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
 
 int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     if (frame->fixCount == 0 && frame->dirtyflag) {
-        writeBlock(frame->frameNum, mgmt->fh, (SM_PageHandle)frame->page->data);
+        writeBlock(frame->pageNum, mgmt->fh, frame->data);
         frame->dirtyflag = FALSE;
         mgmt->writeCount += 1;
     }
@@ -121,10 +123,10 @@ RC forceFlushPool(BM_BufferPool *const bm) {
 }
 
 
-BM_Frame *getFrameByNum(BM_FrameList *frameList, BM_PageHandle *const page) {
+BM_Frame *getFrameByNum(BM_FrameList *frameList,PageNumber pageNum) {
     BM_Frame *curr = frameList->head;
     while (curr) {
-        if (page->pageNum == curr->frameNum) {
+        if (pageNum == curr->pageNum) {
             return curr;
         }
         curr = curr->next;
@@ -134,7 +136,7 @@ BM_Frame *getFrameByNum(BM_FrameList *frameList, BM_PageHandle *const page) {
 // Buffer Manager Interface Access Pages
 RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    BM_Frame *curr = getFrameByNum(mgmt->frameList, page);
+    BM_Frame *curr = getFrameByNum(mgmt->frameList, page->pageNum);
     if (!curr) {
         return RC_FAIL;
     }
@@ -143,6 +145,12 @@ RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page) {
 }
 
 RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = getFrameByNum(mgmt->frameList, page->pageNum);
+    if (!curr) {
+        return RC_FAIL;
+    }
+    curr->fixCount -= 1;
     return RC_OK;    
 }
 
@@ -150,9 +158,39 @@ RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     return RC_OK;    
 }
 
+RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
+    if (frame->pageNum == NO_PAGE) {
+        return RC_RETURN;
+    }
+    return RC_OK;
+}
+
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
-
+    BM_Frame *frame = NULL;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    // find pageNum frame
+    frame = getFrameByNum(mgmt->frameList, pageNum);
+    // find empty frame
+    if (!frame) {
+        frame = (BM_Frame *)traverseFrameList(mgmt->frameList, mgmt, getAndCheckEmptyPage);
+    }
+    // replace algorithm
+    if (!frame) {
+        
+    }
+    if (!frame) {
+        return RC_FAIL;
+    }
+    frame->data = MAKE_MEMPAGE();
+    ensureCapacity(pageNum, mgmt->fh);
+    readBlock(pageNum, mgmt->fh, frame->data);
+    frame->dirtyflag = FALSE;
+    frame->pageNum = pageNum;
+    frame->timestamp = getTimeStamp();
+    frame->fixCount += 1;
+    frame->refCount += 1;
+    mgmt->readCount += 1;
     return RC_OK;    
 }
 

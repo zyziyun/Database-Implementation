@@ -18,4 +18,4 @@ test_assign2_2: $(SOURCE2)
 	gcc -o $(TARGET2) $(SOURCE2) -g
 
 clean:
-	rm -rf *.o $(TARGET)
+	rm -rf *.o $(TARGET1) $(TARGET2)
