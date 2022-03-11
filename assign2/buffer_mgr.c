@@ -282,27 +282,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     return RC_OK;    
 }
 //Replacement Strategy
-//LRU implementation
-BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    BM_Frame *curr = frameList->head;
-    BM_Frame *ret = curr;
-    int min = curr->timestamp;
-    while (curr) {
-        if (curr->timestamp < min) {
-            min = curr->timestamp;
-            ret = curr;
-        }
-        curr = curr->next;
-    }
-    return ret;
-}
-
-BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
-}
-BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
-}
+//FIFO
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -316,6 +296,28 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     }
     return ret;
 }
+//LRU implementation
+BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
+    int max = curr->timestamp;
+    while (curr) {
+        if (curr->timestamp > max) {
+            max = curr->timestamp;
+            ret = curr;
+        }
+        curr = curr->next;
+    }
+    return ret;
+}
+
+BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    return frameList->head;
+}
+BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    return frameList->head;
+}
+
 BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
