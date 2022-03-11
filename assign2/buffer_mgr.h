@@ -84,7 +84,12 @@ typedef struct BM_MgmtData {
 #define MAKE_MEMPAGE() \
 		((SM_PageHandle) malloc(sizeof(PAGE_SIZE)))
 
-
+//Replacement Strategy
+BM_Frame *pinPageLRU(BM_FrameList *frameList);
+BM_Frame *pinPageLRUK(BM_FrameList *frameList);
+BM_Frame *pinPageLFU(BM_FrameList *frameList);
+BM_Frame *pinPageFIFO(BM_FrameList *frameList);
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList);
 
 
 // Buffer Manager Interface Pool Handling
