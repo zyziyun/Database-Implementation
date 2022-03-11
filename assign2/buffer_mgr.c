@@ -13,12 +13,16 @@ int getTimeStamp() {
     return time(&now);
 }
 
-void traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, int (*callback)(BM_Frame*, BM_MgmtData*)) {
+void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, int (*callback)(BM_Frame*, BM_MgmtData*)) {
     BM_Frame *curr = frameList->head;
     while (curr) {
-        callback(curr, mgmt);
+        int status = callback(curr, mgmt);
+        if (status == RC_RETURN) {
+            return curr;
+        }
         curr = curr->next;
     }
+    return NULL;
 }
 
 BM_Frame *initFrame(int num) {
@@ -105,7 +109,8 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
 int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     if (frame->fixCount == 0 && frame->dirtyflag) {
         writeBlock(frame->frameNum, mgmt->fh, (SM_PageHandle)frame->page->data);
-        frame->dirtyflag = true;
+        frame->dirtyflag = FALSE;
+        mgmt->writeCount += 1;
     }
     return 0;
 }
@@ -115,10 +120,25 @@ RC forceFlushPool(BM_BufferPool *const bm) {
     return RC_OK;    
 }
 
+
+BM_Frame *getFrameByNum(BM_FrameList *frameList, BM_PageHandle *const page) {
+    BM_Frame *curr = frameList->head;
+    while (curr) {
+        if (page->pageNum == curr->frameNum) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
 // Buffer Manager Interface Access Pages
 RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-
+    BM_Frame *curr = getFrameByNum(mgmt->frameList, page);
+    if (!curr) {
+        return RC_FAIL;
+    }
+    curr->dirtyflag = TRUE;
     return RC_OK;    
 }
 
