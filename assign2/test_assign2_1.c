@@ -46,9 +46,9 @@ main (void)
   testName = "";
 
   testCreatingAndReadingDummyPages();
-  // testReadPage();
-  // testFIFO();
-  // testLRU();
+  testReadPage();
+  testFIFO();
+  testLRU();
 }
 
 // create n pages with content "Page X" and read them back to check whether the content is right
@@ -63,8 +63,8 @@ testCreatingAndReadingDummyPages (void)
   createDummyPages(bm, 22);
   checkDummyPages(bm, 20);
 
-  // createDummyPages(bm, 10000);
-  // checkDummyPages(bm, 10000);
+  createDummyPages(bm, 10000);
+  checkDummyPages(bm, 10000);
 
   CHECK(destroyPageFile("testbuffer.bin"));
 

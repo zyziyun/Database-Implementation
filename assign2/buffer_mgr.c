@@ -102,6 +102,11 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
 
 RC shutdownBufferPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    while (curr) {
+        curr->fixCount = 0;
+        curr = curr->next;
+    }
     forceFlushPool(bm);
     // free memory in linkedlist
     destoryFrameList(mgmt->frameList);
@@ -117,9 +122,11 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
 }
 
 void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
+    pthread_mutex_lock(&mgmt->mutexlock);
     writeBlock(frame->pageNum, mgmt->fh, frame->data);
     frame->dirtyflag = FALSE;
     mgmt->writeCount += 1;
+    pthread_mutex_unlock(&mgmt->mutexlock);
 }
 int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     if (frame->fixCount == 0 && frame->dirtyflag) {
@@ -130,9 +137,8 @@ int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
 RC forceFlushPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     traverseFrameList(mgmt->frameList, mgmt, forceFlushSingle);
-    return RC_OK;    
+    return RC_OK;
 }
-
 
 BM_Frame *getFrameByNum(BM_FrameList *frameList,PageNumber pageNum) {
     BM_Frame *curr = frameList->head;
@@ -218,7 +224,6 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     BM_PINPAGE *bm_pinpage;
     BM_Frame *frame = NULL;
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    pthread_mutex_lock(&mgmt->mutexlock);
     bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
@@ -226,6 +231,9 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     frame = bm_pinpage->frame;
     if (bm_pinpage->status == PIN_EMPTY) {
         frame->data = (SM_PageHandle) malloc(PAGE_SIZE);
+        ensureCapacity(pageNum, mgmt->fh);
+        readBlock(pageNum, mgmt->fh, frame->data);
+        frame->pageNum = pageNum;
     } else if (bm_pinpage->status == PIN_REPLACE) {
         if (frame->dirtyflag) {
             forceWriteSingle(frame, mgmt);
@@ -236,10 +244,10 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         frame->dirtyflag = FALSE;
         frame->fixCount = 0;
         frame->refCount = 0;
+        ensureCapacity(pageNum, mgmt->fh);
+        readBlock(pageNum, mgmt->fh, frame->data);
+        frame->pageNum = pageNum;
     }
-    ensureCapacity(pageNum, mgmt->fh);
-    readBlock(pageNum, mgmt->fh, frame->data);
-    frame->pageNum = pageNum;
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
@@ -250,13 +258,22 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     }
     free(bm_pinpage);
     bm_pinpage = NULL;
-    pthread_mutex_unlock(&mgmt->mutexlock);
     return RC_OK;    
 }
 //Replacement Strategy
 //LRU implementation
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
+    BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
+    int min = curr->timestamp;
+    while (curr) {
+        if (curr->timestamp < min) {
+            min = curr->timestamp;
+            ret = curr;
+        }
+        curr = curr->next;
+    }
+    return ret;
 }
 
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
@@ -284,15 +301,42 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
 // Statistics Interface
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
-    return 0;
+    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int counter = 0;
+    while (curr) {
+        ret[counter] = curr->pageNum;
+        curr = curr->next;
+        counter++;
+    }
+    return (PageNumber *)ret;
 }
 
 bool *getDirtyFlags (BM_BufferPool *const bm) {
-    return (short)0;
+    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int counter = 0;
+    while (curr) {
+        ret[counter] = curr->dirtyflag;
+        curr = curr->next;
+        counter++;
+    }
+    return (bool *)ret;
 }
 
 int *getFixCounts (BM_BufferPool *const bm) {
-    return 0;
+    int *ret = (int *)malloc(sizeof(int) * bm->numPages);
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int counter = 0;
+    while (curr) {
+        ret[counter] = curr->fixCount;
+        curr = curr->next;
+        counter++;
+    }
+    return ret;
 }
 
 int getNumReadIO (BM_BufferPool *const bm) {
