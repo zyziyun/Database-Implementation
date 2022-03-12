@@ -563,7 +563,41 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
+    BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
+    BM_Frame *ptr, *t;
+    curr->refCount = 0;
+    int max_count = 0;
+    // long min = curr->timestamp;
+    while(curr->next != NULL){
+        ptr = curr->next;
+        t = ptr;
+        while(ptr != NULL){
+            if(curr->data==ptr->data){
+                curr->refCount++;
+                ptr = ptr ->next;
+                t->next = ptr;
+            }else{
+                ptr = ptr->next;
+                t = t->next;
+            }
+        }
+        if(curr->refCount>max_count){
+            max_count = curr->refCount;
+            ret = curr;
+        }
+        
+        curr=curr->next;
+    }
+    // while (curr){
+    //     // printf("\nnumber %i frame, timestamp: %ld", curr->frameNum, curr->timestamp);
+    //     if (curr->timestamp < min) {
+    //         min = curr->timestamp;
+    //         ret = curr;
+    //     }
+    //     curr = curr->next;
+    // }
+    return checkFixCount(ret, frameList, mgmt);
 }
 
 
