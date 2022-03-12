@@ -35,14 +35,14 @@ typedef struct BM_PageHandle {
 
 typedef struct BM_Frame {
 	bool dirtyflag;
-	PageNumber pageNum; // current frame page size in list
-	int frameNum;// current frame number
+	PageNumber pageNum; //  current frame page size in list
+	int frameNum;       //  current frame number
 	SM_PageHandle data;
 
-	long timestamp; // for LRU replacement strategy
-	int fixCount; // pin counter
-	int refCount; // for LFU replacement strategy
-	int k_count; //for LRUK replacement strategy
+	long timestamp;     //  for LRU replacement strategy
+	int fixCount;       //  pin counter
+	int refCount;       //  for LFU replacement strategy
+	int k_count;        //  for LRUK replacement strategy
 
 	struct BM_Frame *prev;
 	struct BM_Frame *next;

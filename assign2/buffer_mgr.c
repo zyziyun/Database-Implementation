@@ -137,8 +137,12 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     BM_MgmtData * mgmt = MAKE_MGMT_DATA();
 
     mgmt->fh = MAKE_FH_HANDLE();
-    openPageFile(bm->pageFile, mgmt->fh);
-
+    RC pageStatus = openPageFile(bm->pageFile, mgmt->fh);
+    if (pageStatus != RC_OK) {
+        free(mgmt->fh);
+        free(mgmt);
+        return pageStatus;
+    }
     mgmt->frameList = initFrameList(numPages);
     mgmt->readCount = 0;
     mgmt->writeCount = 0;
@@ -158,6 +162,9 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
  */
 RC shutdownBufferPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    if (!mgmt) {
+        return RC_FAIL;
+    }
     BM_Frame *curr = mgmt->frameList->head;
     while (curr) {
         curr->fixCount = 0;
@@ -358,8 +365,11 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
  */
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
-    // printf("pageNum-%i/n", pageNum);
+    if (pageNum < 0) {
+        return RC_FAIL;
+    }
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
