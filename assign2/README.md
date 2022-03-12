@@ -6,6 +6,12 @@
 # Test Results:
 - Environment: 'Ubuntu 20.0.4 LTS'(gcc version 9.3.0) and 'mac OS 12.1'(gcc version clang-1300.0.29.30)
 - Pass all tests(100%), function coverage(100%)
+- Include `test_assign2_1`, `test_assign2_2`, we also add `more test` to guarantee quality.
+
+# Summary
+- We have `modularized the code` in the logical way. 
+- We use `macros`, `opaque pointer`, and `callback function` to avoid repeating code(`DRY` principle)
+- Except all requirement lab, we also implement `all of the replacement`.(FIFO/LRU/LFU/CLOCK/LRUK), and passed tests.
 
 # compile and run
 1. cd assign2/
@@ -15,7 +21,7 @@
 # API
 
 ## common function
-1. getTimeStamp(): gets the time
+1. getTimeStamp(): gets the microsecond time - for LRU
 2. traverseFrameList(): goes through the frame list
 3. initFrame(): sets default values for a frame
 4. destroyFrameList(): destroys frame list
@@ -29,6 +35,7 @@
 12. pinPageLRU(): pin replacement strategy LRU implementation
 13. pinPageLRUK(): pin replacement strategy LRUK  implementation
 14. pinPageClock():pin replacement strategy CLOCK implmentation
+15. checkFixCount(): check if the page to be replaced is referenced, if it is referenced it will be automatically replaced with the next page.
 
 ## main function
 1. initBufferPool(): creates a new buffer pool with page frames using the page replacement strategy. 
