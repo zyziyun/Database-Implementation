@@ -352,7 +352,7 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
  */
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
-    
+    printf("pageNum-%i/n", pageNum);
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
@@ -535,20 +535,16 @@ BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author Mansoor Syed
  */
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
-    
-    PageNumber *arrayPageNumbers = (PageNumber*)malloc(bm->numPages * sizeof(PageNumber)); 
-    BM_Frame *frameData = bm->mgmtData;
-
-    for(int i = 0; i < (bm->numPages); i++){
-        if((frameData[i].data) == NULL){
-            arrayPageNumbers[i] = NO_PAGE;
-        }
-        else {
-            arrayPageNumbers[i] = frameData[i].pageNum;
-        }
+    PageNumber *arrayPageNumbers = (PageNumber*)malloc(bm->numPages * sizeof(PageNumber));
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int i;
+    while (curr) {
+        arrayPageNumbers[i] = curr->pageNum;
+        i += 1;
+        curr = curr->next;
     }
     return arrayPageNumbers;
-    
 }
 
 /**
@@ -560,9 +556,13 @@ PageNumber *getFrameContents (BM_BufferPool *const bm) {
  */
 bool *getDirtyFlags (BM_BufferPool *const bm) {
     bool *arrayOfBools = (bool*)malloc(bm->numPages * sizeof(bool));
-    BM_Frame *frameData = bm->mgmtData;
-    for(int i = 0; i < (bm->numPages); i++){
-        arrayOfBools[i] = (bool)frameData->dirtyflag;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int i;
+    while (curr) {
+        arrayOfBools[i] = (bool)curr->dirtyflag;
+        i += 1;
+        curr = curr->next;
     }
     return arrayOfBools;
 }
@@ -576,12 +576,14 @@ bool *getDirtyFlags (BM_BufferPool *const bm) {
  */
 int *getFixCounts (BM_BufferPool *const bm) {
     int *arrayOfInts = (int*)malloc(bm->numPages * sizeof(int));
-    BM_Frame *frameData = bm->mgmtData;
-
-    for(int i = 0; i < (bm->numPages); i++){
-        arrayOfInts[i] = (int)frameData->fixCount;
+    BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    BM_Frame *curr = mgmt->frameList->head;
+    int i;
+    while (curr) {
+        arrayOfInts[i] = (bool)curr->fixCount;
+        i += 1;
+        curr = curr->next;
     }
-
     return arrayOfInts;
 }
 
@@ -593,10 +595,8 @@ int *getFixCounts (BM_BufferPool *const bm) {
  * @author Mansoor Syed
  */
 int getNumReadIO (BM_BufferPool *const bm) {
-    
     BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;
     return (data->readCount);
-
 }
 
 /**
@@ -607,8 +607,6 @@ int getNumReadIO (BM_BufferPool *const bm) {
  * @author Mansoor Syed
  */
 int getNumWriteIO (BM_BufferPool *const bm) {
-
     BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;
     return (data->writeCount);
-
 }
