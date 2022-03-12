@@ -15,12 +15,27 @@ static handlers_t handlers[5] = {
     pinPageLRUK,
 };
 
+/**
+ * @brief gets the time
+ * 
+ * @return int 
+ * @author Yun Zi
+ */
 int getTimeStamp() {
     time_t now;
     now = time(NULL);
     return time(&now);
 }
 
+/**
+ * @brief goes through the frame list
+ * 
+ * @param frameList
+ * @param mgmt
+ * @param callback
+ * @return void 
+ * @author Yun Zi
+ */
 void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, RC (*callback)(BM_Frame*, BM_MgmtData*)) {
     BM_Frame *curr = frameList->head;
     while (curr) {
@@ -33,6 +48,12 @@ void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, RC (*callbac
     return NULL;
 }
 
+/**
+ * @brief sets default values for a frame
+ * 
+ * @return BM_Frame 
+ * @author Yun Zi
+ */
 BM_Frame *initFrame() {
     BM_Frame *frame = MAKE_FRAME();
     frame->dirtyflag = FALSE;
@@ -46,6 +67,13 @@ BM_Frame *initFrame() {
     return frame;
 }
 
+/**
+ * @brief destroys frame list
+ * 
+ * @param frameList
+ * @return void 
+ * @author Yun Zi
+ */
 void destoryFrameList(BM_FrameList *frameList) {
     BM_Frame *curr = frameList->head;
     while (curr) {
@@ -60,6 +88,13 @@ void destoryFrameList(BM_FrameList *frameList) {
     frameList = NULL;
 }
 
+/**
+ * @brief sets frames in frame list
+ * 
+ * @param num
+ * @return BM_FrameList 
+ * @author Yun Zi
+ */
 BM_FrameList *initFrameList(int num) {
     int i;
     BM_Frame *curr;
@@ -75,6 +110,17 @@ BM_FrameList *initFrameList(int num) {
 }
 
 // Buffer Manager Interface Pool Handling
+/**
+ * @brief creates a new buffer pool with page frames using the page replacement strategy
+ * 
+ * @param bm
+ * @param pageFileName
+ * @param numPages
+ * @param strategy
+ * @param stratData
+ * @return RC 
+ * @author Yun Zi
+ */
 RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName, 
 		const int numPages, ReplacementStrategy strategy,
 		void *stratData) {
@@ -97,6 +143,13 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     return RC_OK;
 }
 
+/**
+ * @brief destroys a buffer pool
+ * 
+ * @param bm
+ * @return RC
+ * @author Yun Zi
+ */
 RC shutdownBufferPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = mgmt->frameList->head;
@@ -118,6 +171,14 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
     return RC_OK;
 }
 
+/**
+ * @brief force write to single frame
+ * 
+ * @param frame
+ * @param mgmt
+ * @return void 
+ * @author Yun Zi
+ */
 void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     pthread_mutex_lock(&mgmt->mutexlock);
     writeBlock(frame->pageNum, mgmt->fh, frame->data);
@@ -125,18 +186,43 @@ void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     mgmt->writeCount += 1;
     pthread_mutex_unlock(&mgmt->mutexlock);
 }
+
+/**
+ * @brief force flush of buffer pool
+ * 
+ * @param frame
+ * @param mgmt
+ * @return int
+ * @author Yun Zi
+ */
 int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
     if (frame->fixCount == 0 && frame->dirtyflag) {
         forceWriteSingle(frame, mgmt);
     }
     return 0;
 }
+
+/**
+ * @brief causes all dirty pages with fix count 0 from the buffer pool to be written to disk
+ * 
+ * @param bm
+ * @return RC 
+ * @author Yun Zi
+ */
 RC forceFlushPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     traverseFrameList(mgmt->frameList, mgmt, forceFlushSingle);
     return RC_OK;
 }
 
+/**
+ * @brief gets the frame requested by its page number
+ * 
+ * @param frameList
+ * @param pageNum
+ * @return BM_Frame 
+ * @author Yun Zi
+ */
 BM_Frame *getFrameByNum(BM_FrameList *frameList,PageNumber pageNum) {
     BM_Frame *curr = frameList->head;
     while (curr) {
@@ -147,7 +233,16 @@ BM_Frame *getFrameByNum(BM_FrameList *frameList,PageNumber pageNum) {
     }
     return NULL;
 }
+
 // Buffer Manager Interface Access Pages
+/**
+ * @brief marks a page as dirty
+ * 
+ * @param bm
+ * @param page
+ * @return RC 
+ * @author Yun Zi
+ */
 RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = getFrameByNum(mgmt->frameList, page->pageNum);
@@ -158,6 +253,14 @@ RC markDirty (BM_BufferPool *const bm, BM_PageHandle *const page) {
     return RC_OK;    
 }
 
+/**
+ * @brief unpins the page
+ * 
+ * @param bm
+ * @param page
+ * @return RC
+ * @author Yun Zi
+ */
 RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = getFrameByNum(mgmt->frameList, page->pageNum);
@@ -168,6 +271,14 @@ RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     return RC_OK;
 }
 
+/**
+ * @brief writes the current content of the page back to the page file on disk
+ * 
+ * @param bm
+ * @param page
+ * @return RC 
+ * @author Yun Zi
+ */
 RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *frame = getFrameByNum(mgmt->frameList, page->pageNum);
@@ -177,6 +288,14 @@ RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     return RC_OK;
 }
 
+/**
+ * @brief gets frame and checks if its page number is empty
+ * 
+ * @param frame
+ * @param mgmt
+ * @return RC 
+ * @author Yun Zi
+ */
 RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
     if (frame->pageNum == NO_PAGE) {
         return RC_RETURN;
@@ -184,6 +303,14 @@ RC getAndCheckEmptyPage(BM_Frame *frame, BM_MgmtData *mgmt) {
     return RC_OK;
 }
 
+/**
+ * @brief finds the frame with page to pin
+ * 
+ * @param bm
+ * @param pageNum
+ * @return BM_PINPAGE 
+ * @author Yun Zi
+ */
 BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *frame = NULL;
@@ -214,11 +341,19 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
     return NULL;
 }
 
+/**
+ * @brief pins the page with page number
+ * 
+ * @param bm
+ * @param page
+ * @param pageNum
+ * @return RC 
+ * @author Yun Zi
+ */
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
     
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    pthread_mutex_lock(&mgmt->mutexlock);
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
@@ -278,11 +413,19 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     }
     free(bm_pinpage);
     bm_pinpage = NULL;
-    pthread_mutex_unlock(&mgmt->mutexlock);
     return RC_OK;    
 }
+
 //Replacement Strategy
 //FIFO
+/**
+ * @brief pin replacement strategy FIFO implementation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -298,7 +441,16 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     }
     return ret;
 }
+
 //LRU implementation
+/**
+ * @brief pin replacement strategy LRU implementation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
 // BM_Frame *curr = frameList->head;
 //     BM_Frame *ret = curr;
@@ -333,6 +485,34 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     
     return ret;
 }
+<<<<<<< HEAD
+=======
+
+/**
+ * @brief pin replacement strategy CLOCK implmentation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+
+
+
+    return frameList->head;
+}
+
+/**
+ * @brief pin replacement strategy LRUK implementation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
+>>>>>>> c3d1039e87cadfef31907a7df09d4c1b2e295919
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -355,6 +535,7 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     }
     return ret;
 }
+<<<<<<< HEAD
 BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
 
@@ -362,6 +543,17 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
     return frameList->head;
 }
+=======
+
+/**
+ * @brief pin replacement strategy LFU implmentation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
+>>>>>>> c3d1039e87cadfef31907a7df09d4c1b2e295919
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
@@ -369,6 +561,13 @@ BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
 
 // Statistics Interface
+/**
+ * @brief returns an array of frame contents with contents of each page
+ * 
+ * @param bm
+ * @return PageNumber 
+ * @author Mansoor Syed
+ */
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
     
     PageNumber *arrayPageNumbers = (PageNumber*)malloc(bm->numPages * sizeof(PageNumber)); 
@@ -386,6 +585,13 @@ PageNumber *getFrameContents (BM_BufferPool *const bm) {
     
 }
 
+/**
+ * @brief returns an array with information on whether the flags are dirty or not
+ * 
+ * @param bm
+ * @return bool 
+ * @author Mansoor Syed
+ */
 bool *getDirtyFlags (BM_BufferPool *const bm) {
     bool *arrayOfBools = (bool*)malloc(bm->numPages * sizeof(bool));
     BM_Frame *frameData = bm->mgmtData;
@@ -395,6 +601,13 @@ bool *getDirtyFlags (BM_BufferPool *const bm) {
     return arrayOfBools;
 }
 
+/**
+ * @brief returns an array of ints with the fix count of the page
+ * 
+ * @param bm
+ * @return int 
+ * @author Mansoor Syed
+ */
 int *getFixCounts (BM_BufferPool *const bm) {
     int *arrayOfInts = (int*)malloc(bm->numPages * sizeof(int));
     BM_Frame *frameData = bm->mgmtData;
@@ -406,6 +619,13 @@ int *getFixCounts (BM_BufferPool *const bm) {
     return arrayOfInts;
 }
 
+/**
+ * @brief returns number of pages that have been read from disk since buffer pool has been initialized
+ * 
+ * @param bm
+ * @return int 
+ * @author Mansoor Syed
+ */
 int getNumReadIO (BM_BufferPool *const bm) {
     
     BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;
@@ -413,6 +633,13 @@ int getNumReadIO (BM_BufferPool *const bm) {
 
 }
 
+/**
+ * @brief returns number of pages written to the page file sinze buffer pool has been initialized
+ * 
+ * @param bm
+ * @return int 
+ * @author Mansoor Syed
+ */
 int getNumWriteIO (BM_BufferPool *const bm) {
 
     BM_MgmtData *data = (BM_MgmtData *) bm->mgmtData;

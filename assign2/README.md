@@ -36,7 +36,7 @@
 3. forceFlushPool(): causes all dirty pages with fix count 0 from the buffer pool to be written to disk
 4. markDirty(): marks a page as dirty
 5. unpinPage(): unpins the page
-6. forcePage(): writs the current content of the page back to the page file on disk
+6. forcePage(): writes the current content of the page back to the page file on disk
 7. pinPage(): pins the page with page number
 8. getFrameContents(): returns an array of frame contents with contents of each page
 9. getDirtyFlags(): returns an array with information on whether the flags are dirty or not
