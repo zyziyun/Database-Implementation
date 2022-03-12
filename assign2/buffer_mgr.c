@@ -54,13 +54,14 @@ void *traverseFrameList(BM_FrameList *frameList, BM_MgmtData *mgmt, RC (*callbac
  * @return BM_Frame 
  * @author Yun Zi
  */
-BM_Frame *initFrame() {
+BM_Frame *initFrame(int frameNum) {
     BM_Frame *frame = MAKE_FRAME();
     frame->dirtyflag = FALSE;
     frame->fixCount = 0;
     frame->refCount = 0;
     frame->timestamp = 0;
     frame->data = NULL;
+    frame->frameNum = frameNum;
     frame->pageNum = NO_PAGE;
     frame->next = NULL;
     frame->prev = NULL;
@@ -99,10 +100,10 @@ BM_FrameList *initFrameList(int num) {
     int i;
     BM_Frame *curr;
     BM_FrameList *frameList = MAKE_FRAME_LIST();
-    frameList->head = curr = frameList->tail = initFrame();
+    frameList->head = curr = frameList->tail = initFrame(0);
 
     for (i = 1; i < num; i++) {
-        curr->next = initFrame();
+        curr->next = initFrame(i);
         curr->next->prev = curr;
         frameList->tail = curr = curr->next;
     }
@@ -361,7 +362,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     BM_Frame *frame = bm_pinpage->frame;
     // printf("\nstatus: %i, data: %s, framePageNum: %i", bm_pinpage->status, frame->data, frame->pageNum);
     if (bm_pinpage->status == PIN_REPLACE) {
-        BM_Frame *newFrame = initFrame();
+        BM_Frame *newFrame = initFrame(bm_pinpage->frame->frameNum);
         newFrame->data = (SM_PageHandle) malloc(PAGE_SIZE);
         if (!mgmt->fh) {
             mgmt->fh = MAKE_FH_HANDLE();
@@ -474,6 +475,25 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     
     return ret;
 }
+<<<<<<< HEAD
+=======
+
+/**
+ * @brief pin replacement strategy CLOCK implmentation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+
+
+
+    return frameList->head;
+}
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 
 /**
  * @brief pin replacement strategy LRUK implementation
@@ -483,7 +503,10 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @return BM_Frame 
  * @author MingXi Xia
  */
+<<<<<<< HEAD
 
+=======
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -507,8 +530,20 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return ret;
 }
 
+<<<<<<< HEAD
 BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
+=======
+/**
+ * @brief pin replacement strategy LFU implmentation
+ * 
+ * @param frameList
+ * @param mgmt
+ * @return BM_Frame 
+ * @author MingXi Xia
+ */
+BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
     return frameList->head;
 }
 
@@ -526,10 +561,8 @@ PageNumber *getFrameContents (BM_BufferPool *const bm) {
     PageNumber *arrayPageNumbers = (PageNumber*)malloc(bm->numPages * sizeof(PageNumber));
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = mgmt->frameList->head;
-    int i;
     while (curr) {
-        arrayPageNumbers[i] = curr->pageNum;
-        i += 1;
+        arrayPageNumbers[curr->frameNum] = curr->pageNum;
         curr = curr->next;
     }
     return arrayPageNumbers;
@@ -546,10 +579,8 @@ bool *getDirtyFlags (BM_BufferPool *const bm) {
     bool *arrayOfBools = (bool*)malloc(bm->numPages * sizeof(bool));
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = mgmt->frameList->head;
-    int i;
     while (curr) {
-        arrayOfBools[i] = (bool)curr->dirtyflag;
-        i += 1;
+        arrayOfBools[curr->frameNum] = (bool)curr->dirtyflag;
         curr = curr->next;
     }
     return arrayOfBools;
@@ -566,10 +597,8 @@ int *getFixCounts (BM_BufferPool *const bm) {
     int *arrayOfInts = (int*)malloc(bm->numPages * sizeof(int));
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *curr = mgmt->frameList->head;
-    int i;
     while (curr) {
-        arrayOfInts[i] = (bool)curr->fixCount;
-        i += 1;
+        arrayOfInts[curr->frameNum] = (bool)curr->fixCount;
         curr = curr->next;
     }
     return arrayOfInts;

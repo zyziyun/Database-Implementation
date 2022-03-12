@@ -36,6 +36,7 @@ typedef struct BM_PageHandle {
 typedef struct BM_Frame {
 	bool dirtyflag;
 	PageNumber pageNum; // current frame page size in list
+	int frameNum;// current frame number
 	SM_PageHandle data;
 
 	int timestamp; // for LRU replacement strategy

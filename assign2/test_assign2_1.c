@@ -45,9 +45,9 @@ main (void)
   initStorageManager();
   testName = "";
 
-  // testCreatingAndReadingDummyPages();
-  // testReadPage();
-  // testFIFO();
+  testCreatingAndReadingDummyPages();
+  testReadPage();
+  testFIFO();
   testLRU();
 }
 
@@ -185,7 +185,7 @@ testFIFO ()
     {
       pinPage(bm, h, requests[i]);
       unpinPage(bm, h);
-      ASSERT_EQUALS_POOL(poolContents[i], bm, "check pool content");
+      ASSERT_EQUALS_POOL(poolContents[i], bm, "check pool content 1");
     }
 
   // pin one page and test remainder
@@ -199,7 +199,7 @@ testFIFO ()
       pinPage(bm, h, requests[i]);
       markDirty(bm, h);
       unpinPage(bm, h);
-      ASSERT_EQUALS_POOL(poolContents[i], bm, "check pool content");
+      ASSERT_EQUALS_POOL(poolContents[i], bm, "check pool content 2");
     }
 
   // flush buffer pool to disk
@@ -263,7 +263,7 @@ testLRU (void)
   CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU, NULL));
 
   // reading first five pages linearly with direct unpin and no modifications
-  for(i = 0; i < 1; i++)
+  for(i = 0; i < 5; i++)
   {
       printf("i-%i/n", i);
       pinPage(bm, h, i);
@@ -272,27 +272,27 @@ testLRU (void)
       snapshot++;
   }
 
-  // // read pages to change LRU order
-  // for(i = 0; i < numLRUOrderChange; i++)
-  // {
-  //     pinPage(bm, h, orderRequests[i]);
-  //     unpinPage(bm, h);
-  //     ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages");
-  //     snapshot++;
-  // }
+  // read pages to change LRU order
+  for(i = 0; i < numLRUOrderChange; i++)
+  {
+      pinPage(bm, h, orderRequests[i]);
+      unpinPage(bm, h);
+      ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages 1");
+      snapshot++;
+  }
 
-  // // replace pages and check that it happens in LRU order
-  // for(i = 0; i < 5; i++)
-  // {
-  //     pinPage(bm, h, 5 + i);
-  //     unpinPage(bm, h);
-  //     ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages");
-  //     snapshot++;
-  // }
+  // replace pages and check that it happens in LRU order
+  for(i = 0; i < 5; i++)
+  {
+      pinPage(bm, h, 5 + i);
+      unpinPage(bm, h);
+      ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages 2");
+      snapshot++;
+  }
 
-  // // check number of write IOs
-  // ASSERT_EQUALS_INT(0, getNumWriteIO(bm), "check number of write I/Os");
-  // ASSERT_EQUALS_INT(10, getNumReadIO(bm), "check number of read I/Os");
+  // check number of write IOs
+  ASSERT_EQUALS_INT(0, getNumWriteIO(bm), "check number of write I/Os");
+  ASSERT_EQUALS_INT(10, getNumReadIO(bm), "check number of read I/Os");
 
   CHECK(shutdownBufferPool(bm));
   CHECK(destroyPageFile("testbuffer.bin"));
