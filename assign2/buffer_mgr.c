@@ -472,8 +472,6 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     
     return ret;
 }
-<<<<<<< HEAD
-=======
 
 /**
  * @brief pin replacement strategy CLOCK implmentation
@@ -490,7 +488,6 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
     return frameList->head;
 }
->>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 
 /**
  * @brief pin replacement strategy LRUK implementation
