@@ -12,10 +12,10 @@ cp:
 	cp ../assign1/dberror.* ./
 
 test_assign2_1: $(SOURCE1)
-	gcc -o $(TARGET1) $(SOURCE1) -g
+	gcc -o $(TARGET1) $(SOURCE1) -g -lm
 
 test_assign2_2: $(SOURCE2)
-	gcc -o $(TARGET2) $(SOURCE2) -g
+	gcc -o $(TARGET2) $(SOURCE2) -g -lm
 
 clean:
 	rm -rf *.o $(TARGET1) $(TARGET2)
