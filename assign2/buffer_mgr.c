@@ -224,6 +224,9 @@ int forceFlushSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
  */
 RC forceFlushPool(BM_BufferPool *const bm) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
+    if (!mgmt) {
+        return RC_FAIL;
+    }
     traverseFrameList(mgmt->frameList, mgmt, forceFlushSingle);
     return RC_OK;
 }
@@ -295,6 +298,9 @@ RC unpinPage (BM_BufferPool *const bm, BM_PageHandle *const page) {
 RC forcePage (BM_BufferPool *const bm, BM_PageHandle *const page) {
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_Frame *frame = getFrameByNum(mgmt->frameList, page->pageNum);
+    if (!frame) {
+        return RC_FAIL;
+    }
     if (frame) {
         forceWriteSingle(frame, mgmt);
     }
@@ -369,7 +375,9 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         return RC_FAIL;
     }
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-
+    if (!mgmt) {
+        return RC_FAIL;
+    }
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
