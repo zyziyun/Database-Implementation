@@ -286,10 +286,11 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
+    BM_Frame *ptr = curr->prev;
     curr->timestamp = getTimeStamp();
     int min = curr->timestamp;
-    while (curr) {
-        if (curr->timestamp < min) {
+    while (curr){
+         if (curr->timestamp < min) {
             min = curr->timestamp;
             ret = curr;
         }
@@ -299,25 +300,38 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
 }
 //LRU implementation
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
+// BM_Frame *curr = frameList->head;
+//     BM_Frame *ret = curr;
+//     curr->timestamp = getTimeStamp();
+//     int max = curr->timestamp;
+//     while (curr) {
+//         if (curr->timestamp > max) {
+//             max = curr->timestamp;
+//             ret = curr;
+//         }
+//         curr = curr->next;
+//     }
+//     return ret;
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
+    BM_Frame *ptr = curr->prev;
     curr->timestamp = getTimeStamp();
-    int max = curr->timestamp;
-    while (curr) {
-        if (curr->timestamp > max) {
-            max = curr->timestamp;
+    int min = curr->timestamp;
+    while (curr){
+        if(curr->data == ptr->data){
+                ptr->timestamp = getTimeStamp();
+        }else{
+            curr->timestamp = getTimeStamp();
+        }
+        if (curr->timestamp < min) {
+            min = curr->timestamp;
             ret = curr;
         }
         curr = curr->next;
+          
     }
+    
     return ret;
-}
-BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    BM_Frame *curr = frameList->head;
-
-
-
-    return frameList->head;
 }
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
@@ -340,6 +354,13 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
           
     }
     return ret;
+}
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+
+
+
+    return frameList->head;
 }
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
