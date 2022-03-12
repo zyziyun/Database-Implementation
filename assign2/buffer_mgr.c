@@ -450,18 +450,7 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-// BM_Frame *curr = frameList->head;
-//     BM_Frame *ret = curr;
-//     curr->timestamp = getTimeStamp();
-//     int max = curr->timestamp;
-//     while (curr) {
-//         if (curr->timestamp > max) {
-//             max = curr->timestamp;
-//             ret = curr;
-//         }
-//         curr = curr->next;
-//     }
-//     return ret;
+
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
     BM_Frame *ptr = curr->prev;
@@ -483,6 +472,8 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     
     return ret;
 }
+<<<<<<< HEAD
+=======
 
 /**
  * @brief pin replacement strategy CLOCK implmentation
@@ -499,6 +490,7 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 
     return frameList->head;
 }
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 
 /**
  * @brief pin replacement strategy LRUK implementation
@@ -508,6 +500,10 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @return BM_Frame 
  * @author MingXi Xia
  */
+<<<<<<< HEAD
+
+=======
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -531,6 +527,10 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return ret;
 }
 
+<<<<<<< HEAD
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+=======
 /**
  * @brief pin replacement strategy LFU implmentation
  * 
@@ -540,6 +540,7 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
+>>>>>>> ed503133d3580c649947ac531c9c49fab691761f
     return frameList->head;
 }
 
