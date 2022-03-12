@@ -43,7 +43,7 @@ typedef struct BM_Frame {
 	int fixCount;       //  pin counter
 	int refCount;       //  for LFU replacement strategy
 	int k_count;        //  for LRUK replacement strategy
-
+	int pointer;		// for CLOCK replacement strategy
 	struct BM_Frame *prev;
 	struct BM_Frame *next;
 } BM_Frame;
