@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <time.h>
+#include <sys/time.h>
 #include "storage_mgr.h"
 #include "buffer_mgr.h"
 #include "dberror.h"
@@ -21,10 +21,15 @@ static handlers_t handlers[5] = {
  * @return int 
  * @author Yun Zi
  */
-int getTimeStamp() {
-    time_t now;
-    now = time(NULL);
-    return time(&now);
+long getTimeStamp() {
+    struct timeval now = {0};
+    long time_sec = 0;
+    long time_mic = 0;
+    gettimeofday(&now, NULL);
+    time_sec = now.tv_sec;
+    // testing needs to be accurate to microseconds
+    time_mic = time_sec * 1000 * 1000 + now.tv_usec;
+    return time_mic;
 }
 
 /**
@@ -419,6 +424,23 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     return RC_OK;    
 }
 
+// special case => have referrence
+BM_Frame *checkFixCount(BM_Frame *ret, BM_FrameList *frameList, BM_MgmtData *mgmt) {
+    if (ret->fixCount == 0) {
+        return ret;
+    }
+    int i = 0;
+    while (i < mgmt->totalSize) {
+        ret = ret->next ? ret->next : frameList->head;
+        if (ret->fixCount == 0) {
+            break;
+        }
+        i += 1;
+    }
+    // TODO: ALL of page have referrence?
+    return ret;
+}
+
 //Replacement Strategy
 //FIFO
 /**
@@ -440,22 +462,7 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
         }
         curr = curr->next;
     }
-    if (ret->fixCount == 0) {
-        return ret;
-    }
-    // special case => have referrence
-    int currIndex = front;
-    int i = 0;
-    while (i < mgmt->totalSize) {
-        currIndex = (currIndex + 1) % mgmt->totalSize;
-        ret = ret->next ? ret->next : frameList->head;
-        if (ret->fixCount == 0) {
-            break;
-        }
-        i += 1;
-    }
-    // TODO: ALL of page have referrence?
-    return ret;
+    return checkFixCount(ret, frameList, mgmt);
 }
 
 //LRU implementation
@@ -468,27 +475,19 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
-    BM_Frame *ptr = curr->prev;
-    curr->timestamp = getTimeStamp();
-    int min = curr->timestamp;
+    long min = curr->timestamp;
     while (curr){
-        if(curr->data == ptr->data){
-                ptr->timestamp = getTimeStamp();
-        }else{
-            curr->timestamp = getTimeStamp();
-        }
+        // printf("\nnumber %i frame, timestamp: %ld", curr->frameNum, curr->timestamp);
         if (curr->timestamp < min) {
             min = curr->timestamp;
             ret = curr;
         }
         curr = curr->next;
-          
     }
-    
-    return ret;
+    return checkFixCount(ret, frameList, mgmt);
+    // return ret;
 }
 
 /**
@@ -519,7 +518,6 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
     BM_Frame *ptr = curr->prev;
-    curr->timestamp = getTimeStamp();
     int min = curr->timestamp;
     curr->k_count = 0;
     while (curr){

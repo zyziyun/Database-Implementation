@@ -48,7 +48,7 @@ main (void)
   testCreatingAndReadingDummyPages();
   testReadPage();
   testFIFO();
-  // testLRU();
+  testLRU();
 }
 
 // create n pages with content "Page X" and read them back to check whether the content is right
@@ -265,7 +265,7 @@ testLRU (void)
   // reading first five pages linearly with direct unpin and no modifications
   for(i = 0; i < 5; i++)
   {
-      printf("i-%i/n", i);
+      // printf("i-%i/n", i);
       pinPage(bm, h, i);
       unpinPage(bm, h);
       ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content reading in pages");
@@ -279,12 +279,14 @@ testLRU (void)
       unpinPage(bm, h);
       ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages 1");
       snapshot++;
-  }
 
+  }
+  // printf("numPages: %i, totalSize: %i", bm->numPages, ((BM_MgmtData*)bm->mgmtData)->totalSize);
   // replace pages and check that it happens in LRU order
   for(i = 0; i < 5; i++)
   {
       pinPage(bm, h, 5 + i);
+      // printf("numPages: %i, totalSize: %i", bm->numPages, ((BM_MgmtData*)bm->mgmtData)->totalSize);
       unpinPage(bm, h);
       ASSERT_EQUALS_POOL(poolContents[snapshot], bm, "check pool content using pages 2");
       snapshot++;

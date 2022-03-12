@@ -39,7 +39,7 @@ typedef struct BM_Frame {
 	int frameNum;// current frame number
 	SM_PageHandle data;
 
-	int timestamp; // for LRU replacement strategy
+	long timestamp; // for LRU replacement strategy
 	int fixCount; // pin counter
 	int refCount; // for LFU replacement strategy
 	int k_count; //for LRUK replacement strategy
