@@ -41,6 +41,7 @@ typedef struct BM_Frame {
 	int timestamp; // for LRU replacement strategy
 	int fixCount; // pin counter
 	int refCount; // for LFU replacement strategy
+	int k_count; //for LRUK replacement strategy
 
 	struct BM_Frame *prev;
 	struct BM_Frame *next;
@@ -50,6 +51,7 @@ typedef struct BM_FrameList {
 	BM_Frame *head;
 	BM_Frame *tail;
 } BM_FrameList;
+
 
 typedef struct BM_MgmtData {
 	int totalSize; // buffer pool size

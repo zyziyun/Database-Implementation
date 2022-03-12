@@ -286,6 +286,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
+    curr->timestamp = getTimeStamp();
     int min = curr->timestamp;
     while (curr) {
         if (curr->timestamp < min) {
@@ -300,6 +301,7 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
+    curr->timestamp = getTimeStamp();
     int max = curr->timestamp;
     while (curr) {
         if (curr->timestamp > max) {
@@ -310,17 +312,40 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     }
     return ret;
 }
+BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
 
-BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+
+
     return frameList->head;
+}
+BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
+    BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
+    BM_Frame *ptr = curr->prev;
+    curr->timestamp = getTimeStamp();
+    int min = curr->timestamp;
+    curr->k_count = 0;
+    while (curr){
+        if(curr->data == ptr->data){
+                curr->k_count = ptr->k_count+1;
+        }else{
+            curr->k_count++;
+        }
+        curr->timestamp;
+        if (curr->k_count==2&&curr->timestamp < min) {
+            min = curr->timestamp;
+            ret = curr;
+    }
+        curr = curr->next;
+          return ret;
+    }
 }
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
 }
 
-BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    return frameList->head;
-}
+
 
 // Statistics Interface
 PageNumber *getFrameContents (BM_BufferPool *const bm) {
