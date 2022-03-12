@@ -332,14 +332,14 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
         }else{
             curr->k_count++;
         }
-        curr->timestamp;
         if (curr->k_count==2&&curr->timestamp < min) {
             min = curr->timestamp;
             ret = curr;
     }
         curr = curr->next;
-          return ret;
+          
     }
+    return ret;
 }
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return frameList->head;
