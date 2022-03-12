@@ -213,11 +213,11 @@ testLFU (void)
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     // check that pages get evicted in LFU order
-    "[0 0],[1 0],[2 0],[5 0],[4 0]",
-    "[0 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[8 0],[5 0],[6 0]",
-    "[7 0],[9 0],[8 0],[5 0],[6 0]"
+    "[5 0],[1 0],[2 0],[3 0],[4 0]",
+    "[6 0],[1 0],[2 0],[3 0],[4 0]",
+    "[7 0],[1 0],[2 0],[3 0],[4 0]",
+    "[8 0],[1 0],[2 0],[3 0],[4 0]",
+    "[9 0],[1 0],[2 0],[3 0],[4 0]"
   };
   const int orderRequests[] = {3,4,0,2,1};
   const int numLFUOrderChange = 5;
@@ -242,7 +242,7 @@ testLFU (void)
       snapshot++;
   }
 
-  // read pages to change LRU order
+  // read pages to change LFU order
   for(i = 0; i < numLFUOrderChange; i++)
   {
       pinPage(bm, h, orderRequests[i]);
