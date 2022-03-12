@@ -353,7 +353,7 @@ BM_PINPAGE* pinFindFrame(BM_BufferPool *const bm,PageNumber pageNum) {
  */
 RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page, 
 		const PageNumber pageNum) {
-    printf("pageNum-%i/n", pageNum);
+    // printf("pageNum-%i/n", pageNum);
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
@@ -371,7 +371,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         ensureCapacity(pageNum, mgmt->fh);
         readBlock(pageNum, mgmt->fh, newFrame->data);
         newFrame->pageNum = pageNum;
-
+        mgmt->readCount += 1;
         // printf("\nnewdata: %s, newpageNum: %i, framedata: %s, framepageNum: %i\n", 
         //     newFrame->data, 
         //     newFrame->pageNum, 
@@ -403,11 +403,12 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         ensureCapacity(pageNum, mgmt->fh);
         readBlock(pageNum, mgmt->fh, frame->data);
         frame->pageNum = pageNum;
+        mgmt->readCount += 1;
     }
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
-    mgmt->readCount += 1;
+    
     if (page) {
         page->data = (char *)frame->data;
         page->pageNum = pageNum;
@@ -429,18 +430,14 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
  */
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
-    BM_Frame *ret = curr;
-    BM_Frame *ptr = curr->prev;
-    curr->timestamp = getTimeStamp();
-    int min = curr->timestamp;
+    int front = mgmt->readCount % mgmt->totalSize;
     while (curr){
-         if (curr->timestamp < min) {
-            min = curr->timestamp;
-            ret = curr;
+         if (curr->frameNum == front) {
+            return curr;
         }
         curr = curr->next;
     }
-    return ret;
+    return NULL;
 }
 
 //LRU implementation
