@@ -452,18 +452,7 @@ BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
-// BM_Frame *curr = frameList->head;
-//     BM_Frame *ret = curr;
-//     curr->timestamp = getTimeStamp();
-//     int max = curr->timestamp;
-//     while (curr) {
-//         if (curr->timestamp > max) {
-//             max = curr->timestamp;
-//             ret = curr;
-//         }
-//         curr = curr->next;
-//     }
-//     return ret;
+
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
     BM_Frame *ptr = curr->prev;
