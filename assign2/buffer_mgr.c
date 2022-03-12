@@ -354,7 +354,6 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
 		const PageNumber pageNum) {
     
     BM_MgmtData * mgmt = (BM_MgmtData*)bm->mgmtData;
-    pthread_mutex_lock(&mgmt->mutexlock);
     BM_PINPAGE *bm_pinpage = pinFindFrame(bm, pageNum);
     if (!bm_pinpage) {
         return RC_FAIL;
@@ -414,7 +413,6 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     }
     free(bm_pinpage);
     bm_pinpage = NULL;
-    pthread_mutex_unlock(&mgmt->mutexlock);
     return RC_OK;    
 }
 
