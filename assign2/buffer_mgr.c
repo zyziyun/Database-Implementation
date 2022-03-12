@@ -392,6 +392,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         } else {
             mgmt->frameList->tail = newFrame;
         }
+        newFrame->prev = frame->prev;
         newFrame->next = frame->next;
         free(frame->data);
         frame->data = NULL;
@@ -430,14 +431,31 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
  */
 BM_Frame *pinPageFIFO(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
+    BM_Frame *ret = curr;
     int front = mgmt->readCount % mgmt->totalSize;
     while (curr){
-         if (curr->frameNum == front) {
-            return curr;
+        if (curr->frameNum == front) {
+            ret = curr;
+            break;
         }
         curr = curr->next;
     }
-    return NULL;
+    if (ret->fixCount == 0) {
+        return ret;
+    }
+    // special case => have referrence
+    int currIndex = front;
+    int i = 0;
+    while (i < mgmt->totalSize) {
+        currIndex = (currIndex + 1) % mgmt->totalSize;
+        ret = ret->next ? ret->next : frameList->head;
+        if (ret->fixCount == 0) {
+            break;
+        }
+        i += 1;
+    }
+    // TODO: ALL of page have referrence?
+    return ret;
 }
 
 //LRU implementation
@@ -497,10 +515,6 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @return BM_Frame 
  * @author MingXi Xia
  */
-<<<<<<< HEAD
-
-=======
->>>>>>> ed503133d3580c649947ac531c9c49fab691761f
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
@@ -524,10 +538,6 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     return ret;
 }
 
-<<<<<<< HEAD
-BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
-    BM_Frame *curr = frameList->head;
-=======
 /**
  * @brief pin replacement strategy LFU implmentation
  * 
@@ -537,7 +547,6 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  * @author MingXi Xia
  */
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
->>>>>>> ed503133d3580c649947ac531c9c49fab691761f
     return frameList->head;
 }
 
