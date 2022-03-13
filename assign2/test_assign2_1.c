@@ -50,7 +50,7 @@ main (void)
   testReadPage();
   testFIFO();
   testLRU();
-  testCLOCK();
+  // testCLOCK();
 }
 
 // create n pages with content "Page X" and read them back to check whether the content is right

@@ -72,7 +72,7 @@ createDummyPages(BM_BufferPool *bm, int num)
     free(h);
 }
 
-//test the LRU_K page replacement strategy
+// test the LRU_K page replacement strategy
 void
 testLRU_K (void)
 {
@@ -195,6 +195,8 @@ testError (void)
     free(h);
     TEST_DONE();
 }
+
+// test the LFU page replacement strategy
 void
 testLFU (void)
 {
@@ -213,10 +215,11 @@ testLFU (void)
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     // check that pages get evicted in LFU order
-    "[0 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[8 0],[5 0],[6 0]",
-    "[7 0],[9 0],[8 0],[5 0],[6 0]"
+    "[5 0],[1 0],[2 0],[3 0],[4 0]",
+    "[6 0],[1 0],[2 0],[3 0],[4 0]",
+    "[7 0],[1 0],[2 0],[3 0],[4 0]",
+    "[8 0],[1 0],[2 0],[3 0],[4 0]",
+    "[9 0],[1 0],[2 0],[3 0],[4 0]"
   };
   const int orderRequests[] = {3,4,0,2,1};
   const int numLFUOrderChange = 5;
@@ -251,7 +254,7 @@ testLFU (void)
 
   }
   // printf("numPages: %i, totalSize: %i", bm->numPages, ((BM_MgmtData*)bm->mgmtData)->totalSize);
-  // replace pages and check that it happens in LRU order
+  // replace pages and check that it happens in LFU order
   for(i = 0; i < 5; i++)
   {
       pinPage(bm, h, 5 + i);

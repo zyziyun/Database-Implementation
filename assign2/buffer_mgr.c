@@ -10,8 +10,8 @@
 static handlers_t handlers[5] = {
     pinPageFIFO,
     pinPageLRU,
-    pinPageLFU,
     pinPageCLOCK,
+    pinPageLFU,
     pinPageLRUK,
 };
 
@@ -582,18 +582,6 @@ BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *ret = curr;
     int min_count = curr->refCount;
     while(curr){
-        // ptr = curr->next;
-        // t = ptr;
-        // while(ptr != NULL){
-        //     if(curr->data == ptr->data){
-                
-        //         ptr = ptr ->next;
-        //         t->next = ptr;
-        //     }else{
-        //         ptr = ptr->next;
-        //         t = t->next;
-        //     }
-        // }
         if(curr->refCount<min_count){
             min_count = curr->refCount;
             ret = curr;
