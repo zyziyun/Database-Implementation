@@ -31,7 +31,7 @@ free(real);                                \
 // test and helper methods
 static void createDummyPages(BM_BufferPool *bm, int num);
 
-//static void testLRU_K (void);
+static void testLRU_K (void);
 
 static void testError (void);
 
@@ -44,7 +44,7 @@ main (void)
     initStorageManager();
     testName = "";
     
-    // testLRU_K();
+    testLRU_K();
     testError();
     testLFU();
     return 0;
@@ -108,8 +108,8 @@ testLRU_K (void)
     
     CHECK(createPageFile("testbuffer.bin"));
     createDummyPages(bm, 100);
-    // int k = 1; CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, &k));
-    CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, NULL));
+    int k = 1; CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, &k));
+    // CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, NULL));
     
     // reading first five pages linearly with direct unpin and no modifications
     for(i = 0; i < 5; i++)

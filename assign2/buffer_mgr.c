@@ -147,7 +147,9 @@ RC initBufferPool(BM_BufferPool *const bm, const char *const pageFileName,
     mgmt->readCount = 0;
     mgmt->writeCount = 0;
     mgmt->totalSize = numPages;
-    mgmt->stratData = stratData;
+    if (strategy == RS_LRU_K) {
+        mgmt->k = stratData ? *((int*)stratData) : 1;
+    }
     pthread_mutex_init(&(mgmt->mutexlock), NULL);
     bm->mgmtData = mgmt;
     return RC_OK;
@@ -176,7 +178,6 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
     closePageFile (mgmt->fh);
     free(mgmt->fh);
     free(mgmt);
-    mgmt->stratData = NULL;
     mgmt->fh = NULL;
     mgmt->frameList = NULL;
     bm->mgmtData = NULL;
@@ -549,23 +550,29 @@ BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
  */
 BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
-    BM_Frame *ret = curr;
-    BM_Frame *ptr = curr->prev;
-    int min = curr->timestamp;
-    curr->k_count = 0;
-    while (curr){
-        if(curr->data == ptr->data){
-                curr->k_count = ptr->k_count+1;
-        }else{
-            curr->k_count++;
-        }
-        if (curr->k_count==2&&curr->timestamp < min) {
-            min = curr->timestamp;
-            ret = curr;
-    }
+    BM_Frame *ret = NULL;
+    BM_Frame ** arr = (BM_Frame**)malloc(sizeof(BM_Frame*) * mgmt->totalSize);
+    int i = 0;
+    int j = 0;
+    while (i < mgmt->totalSize){
+        arr[i] = curr;
         curr = curr->next;
-          
+        i += 1;
     }
+    for (i = 0; i < mgmt->totalSize - 1; i++) {
+        for (j = 0; j < mgmt->totalSize - i - 1; j++) {
+            if (arr[j]->timestamp > arr[j+1]->timestamp) {
+                BM_Frame * temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            }
+        }
+    }
+    // for (i = 0;i < mgmt->totalSize; i++) {
+    //     printf("timestamp: %ld, frameNum: %d\n", arr[i]->timestamp, arr[i]->frameNum);
+    // }
+    ret = arr[mgmt->k - 1];
+    free(arr);
     return ret;
 }
 

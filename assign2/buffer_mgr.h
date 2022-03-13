@@ -60,7 +60,7 @@ typedef struct BM_MgmtData {
 	int writeCount;
 	SM_FileHandle *fh;
 	BM_FrameList *frameList;
-	void *stratData;
+	int k;
 	pthread_mutex_t mutexlock;// make the buffer pool thread safe
 } BM_MgmtData;
 
