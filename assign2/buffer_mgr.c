@@ -382,6 +382,9 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     if (!bm_pinpage) {
         return RC_FAIL;
     }
+    if (!bm_pinpage->frame) {
+        return RC_FAIL;
+    }
     BM_Frame *frame = bm_pinpage->frame;
     // printf("\nstatus: %i, data: %s, framePageNum: %i", bm_pinpage->status, frame->data, frame->pageNum);
     if (bm_pinpage->status == PIN_REPLACE) {
@@ -394,6 +397,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         ensureCapacity(pageNum, mgmt->fh);
         readBlock(pageNum, mgmt->fh, newFrame->data);
         newFrame->pageNum = pageNum;
+        newFrame->frameNum = frame->frameNum;
         mgmt->readCount += 1;
         // printf("\nnewdata: %s, newpageNum: %i, framedata: %s, framepageNum: %i\n", 
         //     newFrame->data, 
@@ -432,7 +436,8 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
-    frame->pointer += 1;
+    frame->pointer = 1;
+    
     if (page) {
         page->data = (char *)frame->data;
         page->pageNum = pageNum;
@@ -451,12 +456,12 @@ BM_Frame *checkFixCount(BM_Frame *ret, BM_FrameList *frameList, BM_MgmtData *mgm
     while (i < mgmt->totalSize) {
         ret = ret->next ? ret->next : frameList->head;
         if (ret->fixCount == 0) {
-            break;
+            return ret;
         }
         i += 1;
     }
     // TODO: ALL of page have referrence?
-    return ret;
+    return NULL;
 }
 
 //Replacement Strategy

@@ -44,9 +44,13 @@ main (void)
     initStorageManager();
     testName = "";
     
+<<<<<<< HEAD
     //testLRU_K();
+=======
+    // testLRU_K();
+>>>>>>> ed3c206b830221bc54c8893b645dd0621fff112b
     testError();
-    testLFU();
+    // testLFU();
     return 0;
 }
 
@@ -164,7 +168,7 @@ testError (void)
     CHECK(pinPage(bm, h, 1));
     CHECK(pinPage(bm, h, 2));
     
-    // ASSERT_ERROR(pinPage(bm, h, 3), "try to pin page when pool is full of pinned pages with fix-count > 0");
+    ASSERT_ERROR(pinPage(bm, h, 3), "try to pin page when pool is full of pinned pages with fix-count > 0");
     
     CHECK(shutdownBufferPool(bm));
     
