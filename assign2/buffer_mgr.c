@@ -524,23 +524,17 @@ BM_Frame *pinPageLRU(BM_FrameList *frameList, BM_MgmtData *mgmt){
 BM_Frame *pinPageCLOCK(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
-    BM_Frame *ptr,*t;
-    while(curr->next != NULL){
-        ptr = curr->next;
-        while(ptr != NULL){
-            if(curr->data == ptr->data){
-                curr->pointer = 0;
-                ptr = ptr->next;
-                t -> next = ptr;
-            }else{
-                curr->pointer = 1;
-                ptr = ptr->next;
-                t = t->next;
-            }
-        }
+    while(curr){
         if(curr->pointer == 0){
             ret = curr;
+            break;
         }
+        
+        curr = curr->next;
+    }
+    while(curr){
+        curr->pointer = 0;
+        curr=curr->next;
     }
     return checkFixCount(ret, frameList, mgmt);
 }
