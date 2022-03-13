@@ -44,13 +44,9 @@ main (void)
     initStorageManager();
     testName = "";
     
-<<<<<<< HEAD
-    //testLRU_K();
-=======
     // testLRU_K();
->>>>>>> ed3c206b830221bc54c8893b645dd0621fff112b
     testError();
-    // testLFU();
+    testLFU();
     return 0;
 }
 
@@ -77,79 +73,79 @@ createDummyPages(BM_BufferPool *bm, int num)
 }
 
 // test the LRU_K page replacement strategy
-// void
-// testLRU_K (void)
-// {
-//     // expected results
-//     const char *poolContents[] = {
-//         // read first five pages and directly unpin them
-//         "[0 0],[-1 0],[-1 0],[-1 0],[-1 0]" ,
-//         "[0 0],[1 0],[-1 0],[-1 0],[-1 0]",
-//         "[0 0],[1 0],[2 0],[-1 0],[-1 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[-1 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         // use some of the page to create a fixed LRU_K order without changing pool content
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         "[0 0],[1 0],[2 0],[3 0],[4 0]",
-//         // check that pages get evicted in LRU_K order
-//         "[0 0],[1 0],[2 0],[5 0],[4 0]",
-//         "[0 0],[1 0],[2 0],[5 0],[6 0]",
-//         "[7 0],[1 0],[2 0],[5 0],[6 0]",
-//         "[7 0],[1 0],[8 0],[5 0],[6 0]",
-//         "[7 0],[9 0],[8 0],[5 0],[6 0]"
-//     };
-//     const int orderRequests[] = {3,4,0,2,1};
-//     const int numLRU_KOrderChange = 5;
+void
+testLRU_K (void)
+{
+    // expected results
+    const char *poolContents[] = {
+        // read first five pages and directly unpin them
+        "[0 0],[-1 0],[-1 0],[-1 0],[-1 0]" ,
+        "[0 0],[1 0],[-1 0],[-1 0],[-1 0]",
+        "[0 0],[1 0],[2 0],[-1 0],[-1 0]",
+        "[0 0],[1 0],[2 0],[3 0],[-1 0]",
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        // use some of the page to create a fixed LRU_K order without changing pool content
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        "[0 0],[1 0],[2 0],[3 0],[4 0]",
+        // check that pages get evicted in LRU_K order
+        "[0 0],[1 0],[2 0],[5 0],[4 0]",
+        "[0 0],[1 0],[2 0],[5 0],[6 0]",
+        "[7 0],[1 0],[2 0],[5 0],[6 0]",
+        "[7 0],[1 0],[8 0],[5 0],[6 0]",
+        "[7 0],[9 0],[8 0],[5 0],[6 0]"
+    };
+    const int orderRequests[] = {3,4,0,2,1};
+    const int numLRU_KOrderChange = 5;
     
-//     int i;
-//     int snapshot = 0;
-//     BM_BufferPool *bm = MAKE_POOL();
-//     BM_PageHandle *h = MAKE_PAGE_HANDLE();
-//     testName = "Testing LRU_K page replacement";
+    int i;
+    int snapshot = 0;
+    BM_BufferPool *bm = MAKE_POOL();
+    BM_PageHandle *h = MAKE_PAGE_HANDLE();
+    testName = "Testing LRU_K page replacement";
     
-//     CHECK(createPageFile("testbuffer.bin"));
-//     createDummyPages(bm, 100);
-//     // int k = 1; CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, &k));
-//     CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, NULL));
+    CHECK(createPageFile("testbuffer.bin"));
+    createDummyPages(bm, 100);
+    // int k = 1; CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, &k));
+    CHECK(initBufferPool(bm, "testbuffer.bin", 5, RS_LRU_K, NULL));
     
-//     // reading first five pages linearly with direct unpin and no modifications
-//     for(i = 0; i < 5; i++)
-//     {
-//         pinPage(bm, h, i);
-//         unpinPage(bm, h);
-//         ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content reading in pages");
-//     }
+    // reading first five pages linearly with direct unpin and no modifications
+    for(i = 0; i < 5; i++)
+    {
+        pinPage(bm, h, i);
+        unpinPage(bm, h);
+        ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content reading in pages");
+    }
     
-//     // read pages to change LRU_K order
-//     for(i = 0; i < numLRU_KOrderChange; i++)
-//     {
-//         pinPage(bm, h, orderRequests[i]);
-//         unpinPage(bm, h);
-//         ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content using pages");
-//     }
+    // read pages to change LRU_K order
+    for(i = 0; i < numLRU_KOrderChange; i++)
+    {
+        pinPage(bm, h, orderRequests[i]);
+        unpinPage(bm, h);
+        ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content using pages");
+    }
     
-//     // replace pages and check that it happens in LRU_K order
-//     for(i = 0; i < 5; i++)
-//     {
-//         pinPage(bm, h, 5 + i);
-//         unpinPage(bm, h);
-//         ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content using pages");
-//     }
+    // replace pages and check that it happens in LRU_K order
+    for(i = 0; i < 5; i++)
+    {
+        pinPage(bm, h, 5 + i);
+        unpinPage(bm, h);
+        ASSERT_EQUALS_POOL(poolContents[snapshot++], bm, "check pool content using pages");
+    }
     
-//     // check number of write IOs
-//     ASSERT_EQUALS_INT(0, getNumWriteIO(bm), "check number of write I/Os");
-//     ASSERT_EQUALS_INT(10, getNumReadIO(bm), "check number of read I/Os");
+    // check number of write IOs
+    ASSERT_EQUALS_INT(0, getNumWriteIO(bm), "check number of write I/Os");
+    ASSERT_EQUALS_INT(10, getNumReadIO(bm), "check number of read I/Os");
     
-//     CHECK(shutdownBufferPool(bm));
-//     CHECK(destroyPageFile("testbuffer.bin"));
+    CHECK(shutdownBufferPool(bm));
+    CHECK(destroyPageFile("testbuffer.bin"));
     
-//     free(bm);
-//     free(h);
-//     TEST_DONE();
-// }
+    free(bm);
+    free(h);
+    TEST_DONE();
+}
 
 
 // test error cases
@@ -199,6 +195,8 @@ testError (void)
     free(h);
     TEST_DONE();
 }
+
+// test the LFU page replacement strategy
 void
 testLFU (void)
 {
@@ -217,11 +215,11 @@ testLFU (void)
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     "[0 0],[1 0],[2 0],[3 0],[4 0]",
     // check that pages get evicted in LFU order
-    "[0 0],[1 0],[2 0],[5 0],[4 0]",
-    "[0 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[2 0],[5 0],[6 0]",
-    "[7 0],[1 0],[8 0],[5 0],[6 0]",
-    "[7 0],[9 0],[8 0],[5 0],[6 0]"
+    "[5 0],[1 0],[2 0],[3 0],[4 0]",
+    "[6 0],[1 0],[2 0],[3 0],[4 0]",
+    "[7 0],[1 0],[2 0],[3 0],[4 0]",
+    "[8 0],[1 0],[2 0],[3 0],[4 0]",
+    "[9 0],[1 0],[2 0],[3 0],[4 0]"
   };
   const int orderRequests[] = {3,4,0,2,1};
   const int numLFUOrderChange = 5;
@@ -256,7 +254,7 @@ testLFU (void)
 
   }
   // printf("numPages: %i, totalSize: %i", bm->numPages, ((BM_MgmtData*)bm->mgmtData)->totalSize);
-  // replace pages and check that it happens in LRU order
+  // replace pages and check that it happens in LFU order
   for(i = 0; i < 5; i++)
   {
       pinPage(bm, h, 5 + i);
