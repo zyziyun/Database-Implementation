@@ -432,7 +432,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
     frame->timestamp = getTimeStamp();
     frame->fixCount += 1;
     frame->refCount += 1;
-    
+    frame->pointer += 1;
     if (page) {
         page->data = (char *)frame->data;
         page->pageNum = pageNum;
@@ -581,28 +581,24 @@ BM_Frame *pinPageLRUK(BM_FrameList *frameList, BM_MgmtData *mgmt){
 BM_Frame *pinPageLFU(BM_FrameList *frameList, BM_MgmtData *mgmt){
     BM_Frame *curr = frameList->head;
     BM_Frame *ret = curr;
-    BM_Frame *ptr, *t;
-    curr->refCount = 0;
-    int max_count = 0;
-    // long min = curr->timestamp;
-    while(curr->next != NULL){
-        ptr = curr->next;
-        t = ptr;
-        while(ptr != NULL){
-            if(curr->data==ptr->data){
-                curr->refCount++;
-                ptr = ptr ->next;
-                t->next = ptr;
-            }else{
-                ptr = ptr->next;
-                t = t->next;
-            }
-        }
-        if(curr->refCount>max_count){
-            max_count = curr->refCount;
+    int min_count = curr->refCount;
+    while(curr){
+        // ptr = curr->next;
+        // t = ptr;
+        // while(ptr != NULL){
+        //     if(curr->data == ptr->data){
+                
+        //         ptr = ptr ->next;
+        //         t->next = ptr;
+        //     }else{
+        //         ptr = ptr->next;
+        //         t = t->next;
+        //     }
+        // }
+        if(curr->refCount<min_count){
+            min_count = curr->refCount;
             ret = curr;
         }
-        
         curr=curr->next;
     }
     return checkFixCount(ret, frameList, mgmt);
