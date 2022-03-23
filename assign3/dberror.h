@@ -9,11 +9,14 @@
 /* return code definitions */
 typedef int RC;
 
+#define RC_FAIL -1
 #define RC_OK 0
 #define RC_FILE_NOT_FOUND 1
 #define RC_FILE_HANDLE_NOT_INIT 2
 #define RC_WRITE_FAILED 3
 #define RC_READ_NON_EXISTING_PAGE 4
+#define RC_WRITE_NON_EXISTING_PAGE 5
+#define RC_RETURN 6
 
 #define RC_RM_COMPARE_VALUE_OF_DIFFERENT_DATATYPE 200
 #define RC_RM_EXPR_RESULT_IS_NOT_BOOLEAN 201

@@ -15,6 +15,13 @@ typedef struct SM_FileHandle {
 
 typedef char* SM_PageHandle;
 
+// common function
+unsigned long fsize(FILE *fp);
+int fexist(char *fileName);
+int ffill(FILE *fp);
+
+
+
 /************************************************************
  *                    interface                             *
  ************************************************************/
