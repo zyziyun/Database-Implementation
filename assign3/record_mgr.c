@@ -29,7 +29,13 @@ RC shutdownRecordManager () {
 	return RC_OK;
 }
 
-
+/**
+ * @brief Create a Table object
+ * 
+ * @param name 
+ * @param schema 
+ * @return RC 
+ */
 RC createTable (char *name, Schema *schema) {
 	BM_BufferPool *bm = MAKE_POOL();
 
@@ -39,7 +45,15 @@ RC createTable (char *name, Schema *schema) {
 	return RC_OK;
 }
 
+/**
+ * @brief 
+ * 
+ * @param rel 
+ * @param name 
+ * @return RC 
+ */
 RC openTable (RM_TableData *rel, char *name) {
+
 	return RC_OK;
 }
 
@@ -89,21 +103,58 @@ RC closeScan (RM_ScanHandle *scan) {
 // dealing with schemas
 int getRecordSize (Schema *schema) {
 	return 1;
-} 
+}
+
+/**
+ * @brief Create a memory space, and build a Schema object
+ * 
+ * @param numAttr 
+ * @param attrNames 
+ * @param dataTypes 
+ * @param typeLength 
+ * @param keySize 
+ * @param keys 
+ * @return Schema* 
+ */
 Schema *createSchema (int numAttr, char **attrNames, DataType *dataTypes, int *typeLength, int keySize, int *keys) {
-	return NULL;
+	Schema *schema = (Schema *) malloc(sizeof(Schema));
+	schema->numAttr = numAttr;
+	schema->attrNames = attrNames;
+	schema->dataTypes = dataTypes;
+	schema->typeLength = typeLength;
+	schema->keySize = keySize;
+	schema->keyAttrs = keys;
+	return schema;
 }
 
 RC freeSchema (Schema *schema) {
+	free(schema);
 	return RC_OK;
 }
 
 // dealing with records and attribute values
+/**
+ * @brief Create a Record object
+ * 
+ * @param record 
+ * @param schema 
+ * @return RC 
+ */
 RC createRecord (Record **record, Schema *schema) {
+	*record = (Record *) malloc(sizeof(Record));
+	// *record
 	return RC_OK;
 }
 
+/**
+ * @brief 
+ * 
+ * @param record 
+ * @return RC 
+ */
 RC freeRecord (Record *record) {
+	free(record->data);
+	free(record);
 	return RC_OK;
 }
 
@@ -114,5 +165,3 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
 	return RC_OK;
 }
-
-#endif // RECORD_MGR_H

@@ -12,9 +12,17 @@ typedef struct RM_ScanHandle
 	void *mgmtData;
 } RM_ScanHandle;
 
+typedef struct RM_TableHeader{
+	int tupleLen;
+	int freeSpace;
+	int schemaLen;
+	int maxSlotLen;
+	Schema * sc;
+} RM_TableHeader;
+
 // table and manager
 extern RC initRecordManager (void *mgmtData);
-extern RC shutdownRecordManager ();
+extern RC shutdownRecordManager (void);
 extern RC createTable (char *name, Schema *schema);
 extern RC openTable (RM_TableData *rel, char *name);
 extern RC closeTable (RM_TableData *rel);

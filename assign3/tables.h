@@ -35,11 +35,11 @@ typedef struct Record
 // information of a table schema: its attributes, datatypes, 
 typedef struct Schema
 {
-	int numAttr;
-	char **attrNames;
-	DataType *dataTypes;
-	int *typeLength;
-	int *keyAttrs;
+	int numAttr;// a number of attributes
+	char **attrNames;// the name of each attribute 
+	DataType *dataTypes;// records type of table: int, float, string, boolean
+	int *typeLength;// if type = DT_STRING, the size of string
+	int *keyAttrs;// the position of the attributes of the key
 	int keySize;
 } Schema;
 
