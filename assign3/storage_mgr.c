@@ -6,6 +6,7 @@
 #include "storage_mgr.h"
 #include "dberror.h"
 
+int initialize = 0;
 
 /**
  * @brief get the size of page
@@ -32,8 +33,6 @@ int fexist(char *fileName) {
     return (access(fileName, 0) == 0);
 }
 
-int initialize = 0;
-
 
 /**
  * @brief write fill single page with '0'
@@ -57,13 +56,21 @@ int ffill(FILE *fp) {
  * @brief init the storage manager
  * @author Yun Zi
  */
-void initStorageManager (void) {
+void initStorageManager () {
     if (initialize == 0) {
         initialize = 1;
         printf("The storage manager have been ready\n");
     } else {
         printf("The storage manager initialized, Please do not init repeatedly.\n");
     }
+}
+
+/**
+ * @brief shutdown the storage manager
+ * @author Yun Zi
+ */
+void shutdownStorageManager () {
+    initialize = 0;
 }
 
 /**

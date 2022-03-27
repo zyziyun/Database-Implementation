@@ -1,27 +1,41 @@
-#ifndef RECORD_MGR_H
-#define RECORD_MGR_H
-
-#include "dberror.h"
-#include "expr.h"
 #include "tables.h"
+#include "storage_mgr.h"
+#include "buffer_mgr.h"
+#include "record_mgr.h"
 
-// Bookkeeping for scans
-typedef struct RM_ScanHandle
-{
-	RM_TableData *rel;
-	void *mgmtData;
-} RM_ScanHandle;
+
+int MAX_BUFFER_NUMS = 10;
+ReplacementStrategy REPLACE_STRATEGY = RS_LFU;
 
 // table and manager
+/**
+ * @brief 
+ * 
+ * @param mgmtData 
+ * @return RC 
+ */
 RC initRecordManager (void *mgmtData) {
+	initStorageManager();
 	return RC_OK;
 }
 
+/**
+ * @brief 
+ * 
+ * @return RC 
+ */
 RC shutdownRecordManager () {
+	shutdownStorageManager();
 	return RC_OK;
 }
+
 
 RC createTable (char *name, Schema *schema) {
+	BM_BufferPool *bm = MAKE_POOL();
+
+  	initBufferPool(bm, name, MAX_BUFFER_NUMS, REPLACE_STRATEGY, NULL);
+
+	
 	return RC_OK;
 }
 

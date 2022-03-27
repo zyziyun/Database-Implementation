@@ -27,6 +27,7 @@ int ffill(FILE *fp);
  ************************************************************/
 /* manipulating page files */
 extern void initStorageManager (void);
+extern void shutdownStorageManager (void);
 extern RC createPageFile (char *fileName);
 extern RC openPageFile (char *fileName, SM_FileHandle *fHandle);
 extern RC closePageFile (SM_FileHandle *fHandle);
