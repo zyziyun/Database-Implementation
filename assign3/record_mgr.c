@@ -98,11 +98,23 @@ RC writeStrToPage(char *name, int pageNum, char *str) {
 		return result;
 	}
 	// Page 0 include schema and relative table message
-	result = writeBlock(0, &fh, str);
+	result = writeBlock(pageNum, &fh, str);
 	if (result != RC_OK) {
 		return result;
 	}
 	return closePageFile(&fh);
+}
+
+/**
+ * @brief update table header
+ * 
+ * @param name 
+ * @param recordMtdt 
+ * @return RC 
+ */
+RC writeTableHeader(char *name, RM_RecordMtdt *recordMtdt) {
+	char * headerStr = serializeRecordMtdt(recordMtdt);
+	return writeStrToPage(name, 0, headerStr);
 }
 
 /**
@@ -116,22 +128,23 @@ RC createTable (char *name, Schema *schema) {
 	if (fexist(name)) {
         return RC_RM_TABLE_EXISTENCE;
     }
-	char * headerStr;
+	RC result;
 	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt));
 	
 	recordMtdt->slotLen = calcSlotLen(schema);
 	recordMtdt->schemaStr = serializeSchema(schema);
 	recordMtdt->schemaLen = strlen(recordMtdt->schemaStr);
-	recordMtdt->freeOffset = 0;
+	recordMtdt->slotOffset = 0;
+	// The storage of tuple starts from the 1th page
+	recordMtdt->pageOffset = 1;
 	recordMtdt->tupleLen = 0;
 	
 	// Todo: schema overflow new page
-	recordMtdt->slotNum = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
+	recordMtdt->slotMax = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
 
-	headerStr = serializeRecordMtdt(recordMtdt);
-
+	result = writeTableHeader(name, recordMtdt);
 	free(recordMtdt);
-	return writeStrToPage(name, 0, headerStr);
+	return result;
 }
 
 /**
@@ -157,7 +170,6 @@ RC openTable (RM_TableData *rel, char *name) {
 	free(mgmtData->schemaStr);
 	mgmtData->schemaStr = NULL;
 	rel->mgmtData = mgmtData;
-	// TODO: if char * separate free
 	free(ph->data);
 	free(ph);
 	return RC_OK;
@@ -202,7 +214,24 @@ int getNumTuples (RM_TableData *rel) {
 	return mgmtData->tupleLen;
 }
 
+
+void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
+	mgmtData->tupleLen = mgmtData->tupleLen + offset;
+	if (mgmtData->slotOffset + offset >= mgmtData->slotMax) {
+		mgmtData->slotOffset = 0;
+		mgmtData->pageOffset = mgmtData->pageOffset + offset;
+	} else {
+		mgmtData->slotOffset = mgmtData->slotOffset + offset;
+	}
+}
+
 // handling records in a table
+char *extendCharMemmory(char *oldData, char *newData) {
+	int extendLen = strlen(oldData) + strlen(newData);
+	oldData = (char *) realloc(oldData, extendLen);
+	strcat(oldData, newData);
+}
+
 /**
  * @brief 
  * 
@@ -211,6 +240,24 @@ int getNumTuples (RM_TableData *rel) {
  * @return RC 
  */
 RC insertRecord (RM_TableData *rel, Record *record) {
+	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_BufferPool *bm = mgmtData->bm;
+
+	record->id.page = mgmtData->pageOffset;
+	record->id.slot = mgmtData->slotOffset;
+	
+	char *newData = serializeRecord(record, rel->schema);
+	pinPage(bm, ph, record->id.page);
+	ph->data = extendCharMemmory(ph->data, newData);
+	markDirty(bm, ph);
+	unpinPage(bm, ph);
+	forcePage(bm, ph);
+
+	updateRecordOffset(mgmtData, 1);
+	writeTableHeader(rel->name, mgmtData);
+	free(ph->data);
+	free(ph);
 	return RC_OK;
 }
 
@@ -222,14 +269,60 @@ RC insertRecord (RM_TableData *rel, Record *record) {
  * @return RC 
  */
 RC deleteRecord (RM_TableData *rel, RID id) {
+	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_BufferPool *bm = mgmtData->bm;
+	
+	pinPage(bm, ph, id.page);
+	// Todo: NOT SURE how to clear parts of memory
+	memcpy(ph->data + mgmtData->slotLen, "\0", mgmtData->slotLen);
+	markDirty(bm, ph);
+	unpinPage(bm, ph);
+	forcePage(bm, ph);
+
+	updateRecordOffset(mgmtData, -1);
+	writeTableHeader(rel->name, mgmtData);
+	free(ph->data);
+	free(ph);
 	return RC_OK;
 }
 
 RC updateRecord (RM_TableData *rel, Record *record) {
+	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_BufferPool *bm = mgmtData->bm;
+
+	record->id.page = mgmtData->pageOffset;
+	record->id.slot = mgmtData->slotOffset;
+	
+	char *newData = serializeRecord(record, rel->schema);
+
+	pinPage(bm, ph, record->id.page);
+	// Todo: NOT SURE how to clear parts of memory
+	memcpy(ph->data + mgmtData->slotLen, newData, strlen(newData));
+	markDirty(bm, ph);
+	unpinPage(bm, ph);
+	forcePage(bm, ph);
+
+	free(ph->data);
+	free(ph);
 	return RC_OK;
 }
 
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
+	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_BufferPool *bm = mgmtData->bm;
+
+	pinPage(bm, ph, record->id.page);
+	record->id.page = id.page;
+	record->id.slot = id.slot;
+
+	// record->data = deserializeRecordMtdt
+	
+	unpinPage(bm, ph);
+	free(ph->data);
+	free(ph);
 	return RC_OK;
 }
 
@@ -306,6 +399,7 @@ RC freeRecord (Record *record) {
 }
 
 RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
+
 	return RC_OK;
 }
 

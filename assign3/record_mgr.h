@@ -21,9 +21,10 @@ typedef struct RM_RecordMtdt{
 	char *schemaStr;// schema string
 
 	int slotLen;// single slot length
-	int slotNum;// the count of slot on one single page
+	int slotMax;// the count of slot on one single page
 	
-	int freeOffset;// free slot offset
+	int slotOffset;// free slot offset
+	int pageOffset;// page(block) offset
 
 	BM_BufferPool *bm;
 	// BM_PageHandle *ph;
