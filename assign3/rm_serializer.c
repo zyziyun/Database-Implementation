@@ -108,7 +108,6 @@ serializeTableContent(RM_TableData *rel)
 	RETURN_STRING(result);
 }
 
-
 char * 
 serializeSchema(Schema *schema)
 {
