@@ -27,8 +27,8 @@ typedef struct RM_RecordMtdt{
 	int pageOffset;// page(block) offset
 
 	BM_BufferPool *bm;
-	// BM_PageHandle *ph;
 } RM_RecordMtdt;
+
 
 // table and manager
 extern RC initRecordManager (void *mgmtData);
@@ -60,5 +60,9 @@ extern RC createRecord (Record **record, Schema *schema);
 extern RC freeRecord (Record *record);
 extern RC getAttr (Record *record, Schema *schema, int attrNum, Value **value);
 extern RC setAttr (Record *record, Schema *schema, int attrNum, Value *value);
+
+extern char *serializeRecordMtdt(RM_RecordMtdt *);
+extern RM_RecordMtdt *deserializeRecordMtdt(char *);
+extern Schema *deserializeSchema(char * str);
 
 #endif // RECORD_MGR_H

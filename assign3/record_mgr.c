@@ -63,21 +63,6 @@ int calcSlotLen (Schema *schema) {
 	return len;
 }
 
-char *
-serializeRecordMtdt(RM_RecordMtdt * recordMtdt) {
-	return NULL;
-}
-
-RM_RecordMtdt *
-deserializeRecordMtdt(char * str) {
-	return NULL;
-}
-
-Schema *
-deserializeSchema(char * str) {
-	return NULL;
-}
-
 /**
  * @brief write any string to Page File
  * 
@@ -139,7 +124,7 @@ RC createTable (char *name, Schema *schema) {
 	recordMtdt->pageOffset = 1;
 	recordMtdt->tupleLen = 0;
 	
-	// Todo: schema overflow new page
+	// Todo: schema overflow new block
 	recordMtdt->slotMax = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
 
 	result = writeTableHeader(name, recordMtdt);
@@ -163,10 +148,10 @@ RC openTable (RM_TableData *rel, char *name) {
   	initBufferPool(bm, name, MAX_BUFFER_NUMS, REPLACE_STRATEGY, NULL);
 	pinPage(bm, ph, 0);
 
-	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) deserializeRecordMtdt(ph->data);
+	RM_RecordMtdt *mgmtData = deserializeRecordMtdt(ph->data);
 	rel->schema = deserializeSchema(mgmtData->schemaStr);
-	mgmtData->bm;
-
+	mgmtData->bm = bm;
+	
 	free(mgmtData->schemaStr);
 	mgmtData->schemaStr = NULL;
 	rel->mgmtData = mgmtData;
@@ -342,7 +327,7 @@ RC closeScan (RM_ScanHandle *scan) {
 
 // dealing with schemas
 int getRecordSize (Schema *schema) {
-	return 1;
+	return calcSlotLen(schema);
 }
 
 /**
@@ -382,7 +367,7 @@ RC freeSchema (Schema *schema) {
  */
 RC createRecord (Record **record, Schema *schema) {
 	*record = (Record *) malloc(sizeof(Record));
-	// *record
+	(*record)->data = (char *) malloc(getRecordSize(schema));
 	return RC_OK;
 }
 
@@ -404,5 +389,7 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
 }
 
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
+	value->v;
+
 	return RC_OK;
 }

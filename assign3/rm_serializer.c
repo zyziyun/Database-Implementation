@@ -108,6 +108,137 @@ serializeTableContent(RM_TableData *rel)
 	RETURN_STRING(result);
 }
 
+char *
+serializeRecordMtdt(RM_RecordMtdt * recordMtdt) {
+	int i;
+	VarString *result;
+	MAKE_VARSTRING(result);
+
+	APPEND(result, "tupleLen {%i} schemaLen {%i} slotLen {%i} slotMax {%i} slotOffset {%i} pageOffset {%i} schemaStr {%s}",
+		recordMtdt->tupleLen,
+		recordMtdt->schemaLen,
+		recordMtdt->slotLen,
+		recordMtdt->slotMax,
+		recordMtdt->slotOffset,
+		recordMtdt->pageOffset,
+		recordMtdt->schemaStr
+	);
+	RETURN_STRING(result);
+}
+
+int
+strtoi(char *delim, int cut_count) {
+	char *ptr, *temp;
+	int i;
+	for (i = 0; i < cut_count; i++) {
+		temp = strtok(NULL, delim);
+	}
+	return (int) strtol(temp, &ptr, 10);
+}
+
+char *
+strtochar(char *delim, int cut_count) {
+	char *ptr, *temp;
+	int i;
+	for (i = 0; i < cut_count; i++) {
+		temp = strtok(NULL, delim);
+	}
+	ptr = (char *) malloc(sizeof(char) * strlen(temp));
+	return strcpy(ptr, temp);
+}
+
+RM_RecordMtdt *
+deserializeRecordMtdt(char * str) {
+	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt));
+	char *delim = "{}";
+	char strcp[strlen(str)];
+	strcpy(strcp, str);
+	strtok(strcp, delim);
+	recordMtdt->tupleLen = strtoi(delim, 1);
+	recordMtdt->schemaLen = strtoi(delim, 2);
+	recordMtdt->slotLen = strtoi(delim, 2);
+	recordMtdt->slotMax = strtoi(delim, 2);
+	recordMtdt->slotOffset = strtoi(delim, 2);
+	recordMtdt->pageOffset = strtoi(delim, 2);
+	recordMtdt->schemaStr = strtochar(delim, 2);
+	return recordMtdt;
+}
+
+void setKeyIndex(Schema *schema, char *temp, int index) {
+	int i;
+	for (i = 0; i < schema->numAttr; i++) {
+		if (strcmp(temp, schema->attrNames[i])) {
+			schema->keyAttrs[index] = i;
+			break;
+		}
+	}
+}
+
+void
+deserializeSchemaKeys(char *str, Schema *schema) {
+	char *temp;
+	char strcp[strlen(str)];
+	strcpy(strcp, str);
+	temp = strtok(strcp, ",");
+
+	if (strlen(temp) == 0) {
+		schema->keySize = 0;
+		return;
+	}
+	int index = 0;
+	setKeyIndex(schema, temp, index);
+	while(temp = strtok(NULL, ",")) {
+		index += 1;
+		setKeyIndex(schema, temp, index);
+	}
+	schema->keySize = index + 1;
+	schema->keyAttrs = realloc(schema->keyAttrs, schema->keySize * sizeof(int));
+}
+
+Schema * 
+deserializeSchema(char * str)
+{
+	// "Schema with <3> attributes (a: INT, b: STRING[4], c: INT) with keys: (a)\n"
+	Schema *schema = (Schema *) malloc(sizeof(Schema));
+	char *temp;
+	char strcp[strlen(str)];
+	strcpy(strcp, str);
+	strtok(strcp, "<>");
+	schema->numAttr = strtoi("<>", 1);
+	schema->attrNames = (char **)malloc(sizeof(char*) * schema->numAttr);
+	schema->dataTypes = (DataType *)malloc(sizeof(DataType) * schema->numAttr);
+	schema->typeLength = (int *) calloc(schema->numAttr, sizeof(int));
+	schema->keyAttrs = (int *) malloc(schema->numAttr * sizeof(int));
+
+	strtok(NULL, "(");
+	int i;
+	for (i = 0; i < schema->numAttr; i++) {
+		schema->attrNames[i] = strtochar(":", 1);
+		temp = strtok(NULL, i == schema->numAttr - 1 ? ")" : ",");
+		if (strcmp(temp, "INT") == 0) {
+			schema->dataTypes[i] = DT_INT;
+		} else if (strcmp(temp, "FLOAT")) {
+			schema->dataTypes[i] = DT_FLOAT;
+		} else if (strcmp(temp, "BOOL")) {
+			schema->dataTypes[i] = DT_BOOL;
+		} else {
+			temp = strtok(NULL, "[");
+			if (strcmp(temp, "STRING")) {
+				schema->dataTypes[i] = DT_STRING;
+			}
+			schema->typeLength[i] = strtoi("]", 1);
+		}
+	}
+	if (schema->numAttr == 0) {
+		temp = strtok(NULL, ")");
+	}
+	temp = strtok(NULL, "(");
+	temp = strtok(NULL, ")");
+	deserializeSchemaKeys(temp, schema);
+	return schema;
+}
+
+
 char * 
 serializeSchema(Schema *schema)
 {
