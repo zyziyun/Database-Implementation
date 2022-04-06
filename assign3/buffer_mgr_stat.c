@@ -27,6 +27,10 @@ printPoolContent (BM_BufferPool *const bm)
 	for (i = 0; i < bm->numPages; i++)
 		printf("%s[%i%s%i]", ((i == 0) ? "" : ",") , frameContent[i], (dirty[i] ? "x": " "), fixCount[i]);
 	printf("\n");
+
+	free(frameContent);
+	free(dirty);
+	free(fixCount);
 }
 
 char *
@@ -47,6 +51,9 @@ sprintPoolContent (BM_BufferPool *const bm)
 	for (i = 0; i < bm->numPages; i++)
 		pos += sprintf(message + pos, "%s[%i%s%i]", ((i == 0) ? "" : ",") , frameContent[i], (dirty[i] ? "x": " "), fixCount[i]);
 
+	free(frameContent);
+	free(dirty);
+	free(fixCount);
 	return message;
 }
 
