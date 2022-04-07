@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "dberror.h"
 #include "tables.h"
@@ -137,6 +138,16 @@ strtoi(char *delim, int cut_count) {
 }
 
 char *
+trim(char *strIn) {
+	char *beginp = strIn;
+	char *tmp = strIn;
+
+	while (isspace(*beginp)) beginp++;
+	while ((*tmp++ = *beginp++));
+	return strIn;
+}
+
+char *
 strtochar(char *delim, int cut_count) {
 	char *ptr, *temp;
 	int i;
@@ -167,7 +178,7 @@ deserializeRecordMtdt(char * str) {
 void setKeyIndex(Schema *schema, char *temp, int index) {
 	int i;
 	for (i = 0; i < schema->numAttr; i++) {
-		if (strcmp(temp, schema->attrNames[i])) {
+		if (strcmp(temp, schema->attrNames[i]) == 0) {
 			schema->keyAttrs[index] = i;
 			break;
 		}
@@ -195,46 +206,74 @@ deserializeSchemaKeys(char *str, Schema *schema) {
 	schema->keyAttrs = realloc(schema->keyAttrs, schema->keySize * sizeof(int));
 }
 
+void
+deserializeSchemaTypeLength(char **typeLengthTemp, Schema *schema) {
+	// STRING[4]
+	int i;
+	for (i = 0; i < schema->numAttr; i++) {
+		if(schema->dataTypes[i] == DT_STRING) {
+			strtok(typeLengthTemp[i], "[");
+			schema->typeLength[i] = strtoi("]", 1); 
+		}
+	};
+}
+
+void
+deserializeSchemaAttr(char *str_origin, Schema *schema) {
+	// a: INT, b: STRING[4], c: INT
+	char *temp;
+	int i;
+	char *delim = ",";
+	// format string to "x, a: INT, b: STRING[4], c: INT,"
+	char str[strlen(str_origin) + 2];
+	strcpy(str, "x, ");
+	strcat(str, str_origin);
+	strcat(str, delim);
+	// temproary store
+	char **typeLengthTemp = (char **)malloc(sizeof(char*) * schema->numAttr);
+	temp = strtok(str, delim);
+	for (i = 0; i < schema->numAttr; i++) {
+		schema->attrNames[i] = trim(strtochar(":", 1));
+		temp = strtok(NULL, delim);
+		if (strcmp(temp, " INT") == 0) {
+			schema->dataTypes[i] = DT_INT;
+		} else if (strcmp(temp, " FLOAT") == 0) {
+			schema->dataTypes[i] = DT_FLOAT;
+		} else if (strcmp(temp, " BOOL") == 0) {
+			schema->dataTypes[i] = DT_BOOL;
+		} else if (strncmp(temp, " STRING", 7) == 0) {
+			schema->dataTypes[i] = DT_STRING;
+			typeLengthTemp[i] = (char *) malloc(sizeof(char) * strlen(temp));
+			strcpy(typeLengthTemp[i], temp);
+		}
+	}
+	deserializeSchemaTypeLength(typeLengthTemp, schema);
+}
+
 Schema * 
 deserializeSchema(char * str)
 {
 	// "Schema with <3> attributes (a: INT, b: STRING[4], c: INT) with keys: (a)\n"
 	Schema *schema = (Schema *) malloc(sizeof(Schema));
-	char *temp;
+	char *attrs, *keys;
 	char strcp[strlen(str)];
+	// copy str to strcp because do split token after
 	strcpy(strcp, str);
+	// get the number of attributes
 	strtok(strcp, "<>");
 	schema->numAttr = strtoi("<>", 1);
+	// get attributes string
+	attrs = strtochar("()", 2);
+	// get keys string
+	keys = strtochar("()", 2);
+	// initialize and allocate memory space
 	schema->attrNames = (char **)malloc(sizeof(char*) * schema->numAttr);
 	schema->dataTypes = (DataType *)malloc(sizeof(DataType) * schema->numAttr);
 	schema->typeLength = (int *) calloc(schema->numAttr, sizeof(int));
 	schema->keyAttrs = (int *) malloc(schema->numAttr * sizeof(int));
-
-	strtok(NULL, "(");
-	int i;
-	for (i = 0; i < schema->numAttr; i++) {
-		schema->attrNames[i] = strtochar(":", 1);
-		temp = strtok(NULL, i == schema->numAttr - 1 ? ")" : ",");
-		if (strcmp(temp, "INT") == 0) {
-			schema->dataTypes[i] = DT_INT;
-		} else if (strcmp(temp, "FLOAT")) {
-			schema->dataTypes[i] = DT_FLOAT;
-		} else if (strcmp(temp, "BOOL")) {
-			schema->dataTypes[i] = DT_BOOL;
-		} else {
-			temp = strtok(NULL, "[");
-			if (strcmp(temp, "STRING")) {
-				schema->dataTypes[i] = DT_STRING;
-			}
-			schema->typeLength[i] = strtoi("]", 1);
-		}
-	}
-	if (schema->numAttr == 0) {
-		temp = strtok(NULL, ")");
-	}
-	temp = strtok(NULL, "(");
-	temp = strtok(NULL, ")");
-	deserializeSchemaKeys(temp, schema);
+	// split attr and key
+	deserializeSchemaAttr(attrs, schema);
+	deserializeSchemaKeys(keys, schema);
 	return schema;
 }
 
