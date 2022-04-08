@@ -235,14 +235,16 @@ RC insertRecord (RM_TableData *rel, Record *record) {
 	char *newData = serializeRecord(record, rel->schema);
 	pinPage(bm, ph, record->id.page);
 	ph->data = extendCharMemmory(ph->data, newData);
+	
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
 	forcePage(bm, ph);
 
 	updateRecordOffset(mgmtData, 1);
 	writeTableHeader(rel->name, mgmtData);
-	free(ph->data);
-	free(ph);
+
+	// free(ph->data);
+	// free(ph);
 	return RC_OK;
 }
 
@@ -303,7 +305,7 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	record->id.page = id.page;
 	record->id.slot = id.slot;
 
-	// record->data = deserializeRecordMtdt
+	// record->data = deserializeRecordMtdt()
 	
 	unpinPage(bm, ph);
 	free(ph->data);
@@ -384,12 +386,51 @@ RC freeRecord (Record *record) {
 }
 
 RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
+	*value = (Value *) malloc(sizeof(Value*));
+	int offset;
+	char *attrData;
 
+	attrOffset(schema, attrNum, &offset);
+	attrData = record->data + offset;
+	(*value)->dt = schema->dataTypes[attrNum];
+	
+	switch(schema->dataTypes[attrNum]) {
+		case DT_INT:
+			memcpy(&((*value)->v.intV), attrData, sizeof(int));
+			break;
+		case DT_FLOAT:
+			memcpy(&((*value)->v.floatV), attrData, sizeof(float));
+			break;
+		case DT_BOOL:
+			memcpy(&((*value)->v.boolV), attrData, sizeof(bool));
+			break;
+		case DT_STRING:
+			strncpy((*value)->v.stringV, attrData, schema->typeLength[attrNum]);
+			break;
+	}
 	return RC_OK;
 }
 
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
-	value->v;
+	int offset;
+	char *attrData;
 
+	attrOffset(schema, attrNum, &offset);
+	attrData = record->data + offset;
+
+	switch(schema->dataTypes[attrNum]) {
+		case DT_INT:
+			memcpy(attrData, &(value->v.intV), sizeof(int));
+			break;
+		case DT_FLOAT:
+			memcpy(attrData, &(value->v.floatV), sizeof(float));
+			break;
+		case DT_BOOL:
+			memcpy(attrData, &(value->v.boolV), sizeof(bool));
+			break;
+		case DT_STRING:
+			strncpy(attrData, (value->v.stringV), schema->typeLength[attrNum]);
+			break;
+	}
 	return RC_OK;
 }

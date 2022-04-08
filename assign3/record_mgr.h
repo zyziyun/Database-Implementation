@@ -64,5 +64,6 @@ extern RC setAttr (Record *record, Schema *schema, int attrNum, Value *value);
 extern char *serializeRecordMtdt(RM_RecordMtdt *);
 extern RM_RecordMtdt *deserializeRecordMtdt(char *);
 extern Schema *deserializeSchema(char * str);
+extern RC attrOffset (Schema *, int, int *);
 
 #endif // RECORD_MGR_H

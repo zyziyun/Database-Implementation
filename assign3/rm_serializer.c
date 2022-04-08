@@ -69,9 +69,6 @@ typedef struct VarString {
 			free(tmp);					\
 		} while(0)
 
-// prototypes
-static RC attrOffset (Schema *schema, int attrNum, int *result);
-
 // implementations
 char *
 serializeTableInfo(RM_TableData *rel)
@@ -329,8 +326,8 @@ serializeRecord(Record *record, Schema *schema)
 
 	for(i = 0; i < schema->numAttr; i++)
 	{
-		APPEND_STRING(result, serializeAttr (record, schema, i));
 		APPEND(result, "%s", (i == 0) ? "" : ",");
+		APPEND_STRING(result, serializeAttr (record, schema, i));
 	}
 
 	APPEND_STRING(result, ")");
