@@ -10,6 +10,7 @@
 
 int MAX_BUFFER_NUMS = 10;
 ReplacementStrategy REPLACE_STRATEGY = RS_LFU;
+int ATTR_SIZE = 20;
 
 // table and manager
 /**
@@ -45,7 +46,7 @@ int calcSlotLen (Schema *schema) {
 		switch (schema->dataTypes[i])
 		{
 			case DT_INT:
-				len += sizeof(int);
+				len += increment;
 				break;
 			case DT_FLOAT:
 				len += sizeof(float);
@@ -110,24 +111,72 @@ RC writeTableHeader(char *name, RM_RecordMtdt *recordMtdt) {
  * @return RC 
  */
 RC createTable (char *name, Schema *schema) {
-	if (fexist(name)) {
-        return RC_RM_TABLE_EXISTENCE;
-    }
-	RC result;
-	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt));
-	
-	recordMtdt->slotLen = calcSlotLen(schema);
-	recordMtdt->schemaStr = serializeSchema(schema);
-	recordMtdt->schemaLen = strlen(recordMtdt->schemaStr);
-	recordMtdt->slotOffset = 0;
-	// The storage of tuple starts from the 1th page
-	recordMtdt->pageOffset = 1;
-	recordMtdt->tupleLen = 0;
-	
-	// Todo: schema overflow new block
-	recordMtdt->slotMax = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
+	RC result; //
+	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt)); //
+	SM_FileHandle fHandle; //
+	initBufferPool(&recordMtdt->bm, name, MAX_BUFFER_NUMS, RS_LFU, NULL); //
 
-	result = writeTableHeader(name, recordMtdt);
+	int data[PAGE_SIZE]; //
+	int increment = sizeof(int);
+
+	recordMtdt->tupleLen = data[PAGE_SIZE];
+
+    recordMtdt->tupleLen = 0;
+    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+
+    recordMtdt->tupleLen = 1;
+    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+
+	recordMtdt->tupleLen = schema->numAttr;
+    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+
+    recordMtdt->tupleLen = schema->keySize;
+    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+
+	for(int i = 0; i < schema->numAttr; i++){
+		char temp = recordMtdt->tupleLen + '0';
+        char *temp2 = &temp;
+		strncpy(temp2, schema->attrNames[i], ATTR_SIZE);
+		recordMtdt->tupleLen = recordMtdt->tupleLen + ATTR_SIZE;
+
+		recordMtdt->tupleLen = (int)schema->dataTypes[i];
+        recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+        recordMtdt->tupleLen = (int)schema->typeLength[i];
+        recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+	}
+
+	result = createPageFile(name);
+	if(result != RC_OK){
+		return result;
+	}
+
+	result = openPageFile(name, &fHandle);
+	if(result != RC_OK){
+		return result;
+	}
+
+	result = writeBlock(0, &fHandle, (char *)data);
+	if(result != RC_OK){
+		return result;
+	}
+
+	result = closePageFile(&fHandle);
+	if(result != RC_OK){
+		return result;
+	}
+
+	//recordMtdt->slotLen = calcSlotLen(schema);
+	//recordMtdt->schemaStr = serializeSchema(schema);
+	//recordMtdt->schemaLen = strlen(recordMtdt->schemaStr);
+	//recordMtdt->slotOffset = 0;
+	//// The storage of tuple starts from the 1th page
+	//recordMtdt->pageOffset = 1;
+	//recordMtdt->tupleLen = 0;
+	
+	//// Todo: schema overflow new block
+	//recordMtdt->slotMax = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
+
+	//result = writeTableHeader(name, recordMtdt);
 	free(recordMtdt);
 	return result;
 }
@@ -140,23 +189,68 @@ RC createTable (char *name, Schema *schema) {
  * @return RC 
  */
 RC openTable (RM_TableData *rel, char *name) {
-	if (!fexist(name)) {
-		return RC_RM_TABLE_NOT_EXIST;
-	}
-	BM_BufferPool *bm = MAKE_POOL();
-	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-  	initBufferPool(bm, name, MAX_BUFFER_NUMS, REPLACE_STRATEGY, NULL);
-	pinPage(bm, ph, 0);
+	//if (!fexist(name)) {
+	//	return RC_RM_TABLE_NOT_EXIST;
+	//}
+	//BM_BufferPool *bm = MAKE_POOL();
+	//BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+  	//initBufferPool(bm, name, MAX_BUFFER_NUMS, REPLACE_STRATEGY, NULL);
+	//pinPage(bm, ph, 0);
 
-	RM_RecordMtdt *mgmtData = deserializeRecordMtdt(ph->data);
-	rel->schema = deserializeSchema(mgmtData->schemaStr);
-	mgmtData->bm = bm;
+	//RM_RecordMtdt *mgmtData = deserializeRecordMtdt(ph->data);
+	//rel->schema = deserializeSchema(mgmtData->schemaStr);
+	//mgmtData->bm = bm;
 	
-	free(mgmtData->schemaStr);
-	mgmtData->schemaStr = NULL;
-	rel->mgmtData = mgmtData;
-	free(ph->data);
-	free(ph);
+	//free(mgmtData->schemaStr);
+	//mgmtData->schemaStr = NULL;
+	//rel->mgmtData = mgmtData;
+	//free(ph->data);
+	//free(ph);
+
+	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt));
+	int numAttr;
+	int increment = sizeof(int);
+
+	rel->mgmtData = recordMtdt;
+	rel->name = name;
+
+	BM_PageHandle pageHolder = recordMtdt-> ph;
+	pinPage(&recordMtdt->bm, &recordMtdt->ph, 0);
+	
+	recordMtdt->ph.data = recordMtdt->ph.data + increment;
+	
+	recordMtdt->slotOffset = *(int*)recordMtdt->ph.data;
+	recordMtdt->ph.data = recordMtdt->ph.data + increment;
+
+	numAttr = *(int*)recordMtdt->ph.data;
+	recordMtdt->ph.data = recordMtdt->ph.data + increment;
+
+	Schema *schema = (Schema *) malloc(sizeof(Schema));
+
+	schema->numAttr = numAttr;
+	schema->attrNames = (char **) malloc(sizeof(char*)*numAttr);
+	schema->dataTypes = (DataType *) malloc(sizeof(DataType)*numAttr);
+	schema->typeLength = (int *) malloc(sizeof(int)*numAttr);
+
+	for(int i = 0; i<numAttr; i++){
+		schema->attrNames[i] = (char*) malloc(ATTR_SIZE);
+	}
+	for(int i = 0; i < schema->numAttr; i++){
+		strncpy(schema->attrNames[i], recordMtdt->ph.data, ATTR_SIZE);
+		recordMtdt->ph.data = recordMtdt->ph.data + ATTR_SIZE;
+
+		schema->dataTypes[i] = *(int*)recordMtdt->ph;
+		recordMtdt->ph = recordMtdt->ph + increment;
+	}
+
+	rel->schema = schema;
+	unpinPage(&recordMtdt->bm, &pageHolder);
+	forcePage(&recordMtdt->bm, &pageHolder);
+
+	free(recordMtdt);
+	free(schema->attrNames);
+	free(schema->dataTypes);
+	free(schema->typeLength);
 	return RC_OK;
 }
 
@@ -167,7 +261,7 @@ RC openTable (RM_TableData *rel, char *name) {
  * @return RC 
  */
 RC closeTable (RM_TableData *rel) {
-	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	RM_RecordMtdt *mgmtData = rel->mgmtData;
 	shutdownBufferPool(mgmtData->bm);
 	free(rel->mgmtData);
 	free(rel->schema->attrNames);
@@ -227,7 +321,7 @@ char *extendCharMemmory(char *oldData, char *newData) {
 RC insertRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = mgmtData->bm;
+	BM_BufferPool *bm = &mgmtData->bm;
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
@@ -258,7 +352,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
 RC deleteRecord (RM_TableData *rel, RID id) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = mgmtData->bm;
+	BM_BufferPool *bm = &mgmtData->bm;
 	
 	pinPage(bm, ph, id.page);
 	// Todo: NOT SURE how to clear parts of memory
@@ -277,7 +371,7 @@ RC deleteRecord (RM_TableData *rel, RID id) {
 RC updateRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = mgmtData->bm;
+	BM_BufferPool *bm = &mgmtData->bm;
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
@@ -299,7 +393,7 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = mgmtData->bm;
+	BM_BufferPool *bm = &mgmtData->bm;
 
 	pinPage(bm, ph, record->id.page);
 	record->id.page = id.page;
