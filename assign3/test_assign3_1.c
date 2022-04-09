@@ -309,10 +309,11 @@ testUpdateTable (void)
 	Record *r;
 	RID *rids;
 	Schema *schema;
+	printf("i get here");
 	testName = "test creating a new table and insert,update,delete tuples";
 	schema = testSchema();
 	rids = (RID *) malloc(sizeof(RID) * numInserts);
-
+	
 	TEST_CHECK(initRecordManager(NULL));
 	TEST_CHECK(createTable("test_table_r",schema));
 	TEST_CHECK(openTable(table, "test_table_r"));
@@ -396,11 +397,13 @@ testInsertManyRecords(void)
 	testName = "test creating a new table and inserting 10000 records then updating record from rids[3333]";
 	schema = testSchema();
 	rids = (RID *) malloc(sizeof(RID) * numInserts);
-
+	
 	TEST_CHECK(initRecordManager(NULL));
+	
 	TEST_CHECK(createTable("test_table_t",schema));
+	
 	TEST_CHECK(openTable(table, "test_table_t"));
-
+	
 	// insert rows into table
 	for(i = 0; i < numInserts; i++)
 	{

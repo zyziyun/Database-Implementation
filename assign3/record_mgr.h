@@ -25,8 +25,10 @@ typedef struct RM_RecordMtdt{
 	
 	int slotOffset;// free slot offset
 	int pageOffset;// page(block) offset
-
+	
+	BM_PageHandle *ph;
 	BM_BufferPool *bm;
+
 } RM_RecordMtdt;
 
 

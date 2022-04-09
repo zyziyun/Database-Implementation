@@ -46,7 +46,7 @@ int calcSlotLen (Schema *schema) {
 		switch (schema->dataTypes[i])
 		{
 			case DT_INT:
-				len += increment;
+				len += sizeof(int);
 				break;
 			case DT_FLOAT:
 				len += sizeof(float);
@@ -111,38 +111,39 @@ RC writeTableHeader(char *name, RM_RecordMtdt *recordMtdt) {
  * @return RC 
  */
 RC createTable (char *name, Schema *schema) {
+	
 	RC result; //
 	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt)); //
 	SM_FileHandle fHandle; //
-	initBufferPool(&recordMtdt->bm, name, MAX_BUFFER_NUMS, RS_LFU, NULL); //
-
+	
+	//initBufferPool(&recordMtdt->bm, name, MAX_BUFFER_NUMS, RS_LFU, NULL); //
+	
 	int data[PAGE_SIZE]; //
 	int increment = sizeof(int);
 
 	recordMtdt->tupleLen = data[PAGE_SIZE];
+   	recordMtdt->tupleLen = 0;
+    	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
 
-    recordMtdt->tupleLen = 0;
-    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
-
-    recordMtdt->tupleLen = 1;
-    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+    	recordMtdt->tupleLen = 1;
+    	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
 
 	recordMtdt->tupleLen = schema->numAttr;
-    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+    	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
 
-    recordMtdt->tupleLen = schema->keySize;
-    recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
-
+    	recordMtdt->tupleLen = schema->keySize;
+    	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+	
 	for(int i = 0; i < schema->numAttr; i++){
 		char temp = recordMtdt->tupleLen + '0';
-        char *temp2 = &temp;
+        	char *temp2 = &temp;
 		strncpy(temp2, schema->attrNames[i], ATTR_SIZE);
 		recordMtdt->tupleLen = recordMtdt->tupleLen + ATTR_SIZE;
 
 		recordMtdt->tupleLen = (int)schema->dataTypes[i];
-        recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
-        recordMtdt->tupleLen = (int)schema->typeLength[i];
-        recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+        	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
+        	recordMtdt->tupleLen = (int)schema->typeLength[i];
+        	recordMtdt->tupleLen = recordMtdt->tupleLen + increment;
 	}
 
 	result = createPageFile(name);
@@ -206,27 +207,25 @@ RC openTable (RM_TableData *rel, char *name) {
 	//rel->mgmtData = mgmtData;
 	//free(ph->data);
 	//free(ph);
-
+	
 	RM_RecordMtdt *recordMtdt = (RM_RecordMtdt *) malloc(sizeof(RM_RecordMtdt));
 	int numAttr;
 	int increment = sizeof(int);
-
+	
 	rel->mgmtData = recordMtdt;
 	rel->name = name;
-
-	BM_PageHandle pageHolder = recordMtdt-> ph;
-	pinPage(&recordMtdt->bm, &recordMtdt->ph, 0);
+	BM_PageHandle *pageHolder = recordMtdt->ph;
+	pinPage(recordMtdt->bm, recordMtdt->ph, 0);	
+	recordMtdt->ph->data = recordMtdt->ph->data + increment;
 	
-	recordMtdt->ph.data = recordMtdt->ph.data + increment;
-	
-	recordMtdt->slotOffset = *(int*)recordMtdt->ph.data;
-	recordMtdt->ph.data = recordMtdt->ph.data + increment;
+	recordMtdt->slotOffset = *(int*)recordMtdt->ph->data;
+	recordMtdt->ph->data = recordMtdt->ph->data + increment;
 
-	numAttr = *(int*)recordMtdt->ph.data;
-	recordMtdt->ph.data = recordMtdt->ph.data + increment;
+	numAttr = *(int*)recordMtdt->ph->data;
+	recordMtdt->ph->data = recordMtdt->ph->data + increment;
 
 	Schema *schema = (Schema *) malloc(sizeof(Schema));
-
+	
 	schema->numAttr = numAttr;
 	schema->attrNames = (char **) malloc(sizeof(char*)*numAttr);
 	schema->dataTypes = (DataType *) malloc(sizeof(DataType)*numAttr);
@@ -236,16 +235,16 @@ RC openTable (RM_TableData *rel, char *name) {
 		schema->attrNames[i] = (char*) malloc(ATTR_SIZE);
 	}
 	for(int i = 0; i < schema->numAttr; i++){
-		strncpy(schema->attrNames[i], recordMtdt->ph.data, ATTR_SIZE);
-		recordMtdt->ph.data = recordMtdt->ph.data + ATTR_SIZE;
+		strncpy(schema->attrNames[i], recordMtdt->ph->data, ATTR_SIZE);
+		recordMtdt->ph->data = recordMtdt->ph->data + ATTR_SIZE;
 
 		schema->dataTypes[i] = *(int*)recordMtdt->ph;
 		recordMtdt->ph = recordMtdt->ph + increment;
 	}
 
 	rel->schema = schema;
-	unpinPage(&recordMtdt->bm, &pageHolder);
-	forcePage(&recordMtdt->bm, &pageHolder);
+	unpinPage(recordMtdt->bm, pageHolder);
+	forcePage(recordMtdt->bm, pageHolder);
 
 	free(recordMtdt);
 	free(schema->attrNames);
@@ -321,7 +320,7 @@ char *extendCharMemmory(char *oldData, char *newData) {
 RC insertRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = &mgmtData->bm;
+	BM_BufferPool *bm = mgmtData->bm;
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
@@ -352,7 +351,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
 RC deleteRecord (RM_TableData *rel, RID id) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = &mgmtData->bm;
+	BM_BufferPool *bm = mgmtData->bm;
 	
 	pinPage(bm, ph, id.page);
 	// Todo: NOT SURE how to clear parts of memory
@@ -371,7 +370,7 @@ RC deleteRecord (RM_TableData *rel, RID id) {
 RC updateRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = &mgmtData->bm;
+	BM_BufferPool *bm = mgmtData->bm;
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
@@ -393,7 +392,7 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
-	BM_BufferPool *bm = &mgmtData->bm;
+	BM_BufferPool *bm = mgmtData->bm;
 
 	pinPage(bm, ph, record->id.page);
 	record->id.page = id.page;
