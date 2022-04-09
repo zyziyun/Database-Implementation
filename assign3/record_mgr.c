@@ -40,18 +40,21 @@ RC shutdownRecordManager () {
  * @return int 
  */
 int calcSlotLen (Schema *schema) {
-	int len = 0, i = 0;
+	// [1-0] (a:0,b:aaaa,c:3)
+	// initize, 10(int slot.page, slot.id) + 5 [-] ()
+	int len = 16, i = 0;
 	for (i = 0; i < schema->numAttr; i++) {
+		len += strlen(schema->attrNames[i]) + 2;// ,:
 		switch (schema->dataTypes[i])
 		{
 			case DT_INT:
-				len += sizeof(int);
+				len += 5;// maximum int size 5
 				break;
 			case DT_FLOAT:
-				len += sizeof(float);
+				len += 10;
 				break;
 			case DT_BOOL:
-				len += sizeof(bool);
+				len += 5;
 				break;
 			case DT_STRING:
 				len += schema->typeLength[i];
@@ -151,12 +154,10 @@ RC openTable (RM_TableData *rel, char *name) {
 	RM_RecordMtdt *mgmtData = deserializeRecordMtdt(ph->data);
 	rel->schema = deserializeSchema(mgmtData->schemaStr);
 	mgmtData->bm = bm;
-	
-	free(mgmtData->schemaStr);
-	mgmtData->schemaStr = NULL;
+	mgmtData->phSchema = ph;
+
 	rel->mgmtData = mgmtData;
-	free(ph->data);
-	free(ph);
+	rel->name = name;
 	return RC_OK;
 }
 
@@ -168,7 +169,13 @@ RC openTable (RM_TableData *rel, char *name) {
  */
 RC closeTable (RM_TableData *rel) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	// write back header file to file system
+	unpinPage(mgmtData->bm, mgmtData->phSchema);
+	forcePage(mgmtData->bm, mgmtData->phSchema);
+	// close buffer pool
 	shutdownBufferPool(mgmtData->bm);
+	// free(mgmtData->phSchema->data);
+	free(mgmtData->phSchema);
 	free(rel->mgmtData);
 	free(rel->schema->attrNames);
 	free(rel->schema->dataTypes);
@@ -201,20 +208,16 @@ int getNumTuples (RM_TableData *rel) {
 
 
 void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
+	// offset: 1 | 0
 	mgmtData->tupleLen = mgmtData->tupleLen + offset;
-	if (mgmtData->slotOffset + offset >= mgmtData->slotMax) {
+	if (mgmtData->slotOffset + offset > mgmtData->slotMax) {
 		mgmtData->slotOffset = 0;
 		mgmtData->pageOffset = mgmtData->pageOffset + offset;
 	} else {
 		mgmtData->slotOffset = mgmtData->slotOffset + offset;
 	}
-}
-
-// handling records in a table
-char *extendCharMemmory(char *oldData, char *newData) {
-	int extendLen = strlen(oldData) + strlen(newData);
-	oldData = (char *) realloc(oldData, extendLen);
-	strcat(oldData, newData);
+	mgmtData->phSchema->data = serializeRecordMtdt(mgmtData);
+	markDirty(mgmtData->bm, mgmtData->phSchema);
 }
 
 /**
@@ -231,20 +234,20 @@ RC insertRecord (RM_TableData *rel, Record *record) {
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
-	
-	char *newData = serializeRecord(record, rel->schema);
+	record->data = serializeRecord(record, rel->schema);
+
 	pinPage(bm, ph, record->id.page);
-	ph->data = extendCharMemmory(ph->data, newData);
+	// find fit position and insert it
+	int offset = record->id.slot * mgmtData->slotLen;
+	memcpy(ph->data + offset, record->data, strlen(record->data));
 	
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
 	forcePage(bm, ph);
 
 	updateRecordOffset(mgmtData, 1);
-	writeTableHeader(rel->name, mgmtData);
-
 	// free(ph->data);
-	// free(ph);
+	free(ph);
 	return RC_OK;
 }
 
@@ -304,11 +307,10 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	pinPage(bm, ph, record->id.page);
 	record->id.page = id.page;
 	record->id.slot = id.slot;
-
-	// record->data = deserializeRecordMtdt()
+	int offset = record->id.slot * mgmtData->slotLen;
+	memcpy(record->data, ph->data + offset, mgmtData->slotLen);
 	
 	unpinPage(bm, ph);
-	free(ph->data);
 	free(ph);
 	return RC_OK;
 }
@@ -329,7 +331,27 @@ RC closeScan (RM_ScanHandle *scan) {
 
 // dealing with schemas
 int getRecordSize (Schema *schema) {
-	return calcSlotLen(schema);
+	int len = 0, i = 0;
+	for (i = 0; i < schema->numAttr; i++) {
+		switch (schema->dataTypes[i])
+		{
+			case DT_INT:
+				len += sizeof(int);
+				break;
+			case DT_FLOAT:
+				len += sizeof(float);
+				break;
+			case DT_BOOL:
+				len += sizeof(bool);
+				break;
+			case DT_STRING:
+				len += schema->typeLength[i];
+				break;
+			default:
+				break;
+		}
+	}
+	return len;
 }
 
 /**
