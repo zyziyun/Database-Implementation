@@ -84,7 +84,7 @@ void destoryFrameList(BM_FrameList *frameList) {
     BM_Frame *curr = frameList->head;
     while (curr) {
         curr->prev = NULL;
-        free(curr->data);
+        // free(curr->data);
         free(curr);
         curr = curr->next;
         frameList->head = curr;
@@ -194,11 +194,11 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
  * @author Yun Zi
  */
 void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
-    pthread_mutex_lock(&mgmt->mutexlock);
+    // pthread_mutex_lock(&mgmt->mutexlock);
     writeBlock(frame->pageNum, mgmt->fh, frame->data);
     frame->dirtyflag = FALSE;
     mgmt->writeCount += 1;
-    pthread_mutex_unlock(&mgmt->mutexlock);
+    // pthread_mutex_unlock(&mgmt->mutexlock);
 }
 
 /**
@@ -406,7 +406,6 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         //     frame->data, 
         //     frame->pageNum
         // );
-
         if (frame->dirtyflag) {
             forceWriteSingle(frame, mgmt);
         }
@@ -422,8 +421,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         }
         newFrame->prev = frame->prev;
         newFrame->next = frame->next;
-        free(frame->data);
-        frame->data = NULL;
+        // free(frame->data);
         free(frame);
         frame = newFrame;
     }

@@ -148,14 +148,15 @@ RC openTable (RM_TableData *rel, char *name) {
 	}
 	BM_BufferPool *bm = MAKE_POOL();
 	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_PageHandle *phSchema = MAKE_PAGE_HANDLE();
   	initBufferPool(bm, name, MAX_BUFFER_NUMS, REPLACE_STRATEGY, NULL);
-	pinPage(bm, ph, 0);
-
-	RM_RecordMtdt *mgmtData = deserializeRecordMtdt(ph->data);
+	
+	pinPage(bm, phSchema, 0);
+	RM_RecordMtdt *mgmtData = deserializeRecordMtdt(phSchema->data);
 	rel->schema = deserializeSchema(mgmtData->schemaStr);
+	
 	mgmtData->bm = bm;
-	mgmtData->phSchema = ph;
-
+	mgmtData->ph = ph;
 	rel->mgmtData = mgmtData;
 	rel->name = name;
 	return RC_OK;
@@ -169,13 +170,10 @@ RC openTable (RM_TableData *rel, char *name) {
  */
 RC closeTable (RM_TableData *rel) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
-	// write back header file to file system
-	unpinPage(mgmtData->bm, mgmtData->phSchema);
-	forcePage(mgmtData->bm, mgmtData->phSchema);
-	// close buffer pool
+	// write back header file to file system close buffer pool
+	writeTableHeader(rel->name, mgmtData);
 	shutdownBufferPool(mgmtData->bm);
-	// free(mgmtData->phSchema->data);
-	free(mgmtData->phSchema);
+	free(mgmtData->ph);
 	free(rel->mgmtData);
 	free(rel->schema->attrNames);
 	free(rel->schema->dataTypes);
@@ -208,16 +206,18 @@ int getNumTuples (RM_TableData *rel) {
 
 
 void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
-	// offset: 1 | 0
+	// offset: 1 | -1
 	mgmtData->tupleLen = mgmtData->tupleLen + offset;
 	if (mgmtData->slotOffset + offset > mgmtData->slotMax) {
 		mgmtData->slotOffset = 0;
 		mgmtData->pageOffset = mgmtData->pageOffset + offset;
+	} else if (mgmtData->slotOffset + offset < 0) {
+		mgmtData->slotOffset = mgmtData->slotMax;
+		mgmtData->pageOffset = mgmtData->pageOffset + offset;
 	} else {
 		mgmtData->slotOffset = mgmtData->slotOffset + offset;
 	}
-	mgmtData->phSchema->data = serializeRecordMtdt(mgmtData);
-	markDirty(mgmtData->bm, mgmtData->phSchema);
+	
 }
 
 /**
@@ -229,25 +229,23 @@ void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
  */
 RC insertRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
-	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
 
 	record->id.page = mgmtData->pageOffset;
 	record->id.slot = mgmtData->slotOffset;
-	record->data = serializeRecord(record, rel->schema);
+	char *newData = serializeRecord(record, rel->schema);
 
 	pinPage(bm, ph, record->id.page);
 	// find fit position and insert it
 	int offset = record->id.slot * mgmtData->slotLen;
-	memcpy(ph->data + offset, record->data, strlen(record->data));
+	memcpy(ph->data + offset, newData, strlen(newData));
 	
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
-	forcePage(bm, ph);
 
 	updateRecordOffset(mgmtData, 1);
-	// free(ph->data);
-	free(ph);
+	free(newData);
 	return RC_OK;
 }
 
@@ -260,58 +258,49 @@ RC insertRecord (RM_TableData *rel, Record *record) {
  */
 RC deleteRecord (RM_TableData *rel, RID id) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
-	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
 	
 	pinPage(bm, ph, id.page);
 	// Todo: NOT SURE how to clear parts of memory
-	memcpy(ph->data + mgmtData->slotLen, "\0", mgmtData->slotLen);
+	int offset = id.slot * mgmtData->slotLen;
+	memcpy(ph->data + offset, "\0", mgmtData->slotLen);
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
-	forcePage(bm, ph);
 
 	updateRecordOffset(mgmtData, -1);
-	writeTableHeader(rel->name, mgmtData);
-	free(ph->data);
-	free(ph);
 	return RC_OK;
 }
 
 RC updateRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
-	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
 
-	record->id.page = mgmtData->pageOffset;
-	record->id.slot = mgmtData->slotOffset;
-	
 	char *newData = serializeRecord(record, rel->schema);
-
 	pinPage(bm, ph, record->id.page);
-	// Todo: NOT SURE how to clear parts of memory
-	memcpy(ph->data + mgmtData->slotLen, newData, strlen(newData));
+
+	int offset = record->id.slot * mgmtData->slotLen;
+	memcpy(ph->data + offset, newData, strlen(newData));
+
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
-	forcePage(bm, ph);
-
-	free(ph->data);
-	free(ph);
+	free(newData);
 	return RC_OK;
 }
 
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
-	BM_PageHandle *ph = MAKE_PAGE_HANDLE();
+	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
-
-	pinPage(bm, ph, record->id.page);
+	
 	record->id.page = id.page;
 	record->id.slot = id.slot;
+
+	pinPage(bm, ph, id.page);
 	int offset = record->id.slot * mgmtData->slotLen;
 	memcpy(record->data, ph->data + offset, mgmtData->slotLen);
-	
 	unpinPage(bm, ph);
-	free(ph);
 	return RC_OK;
 }
 

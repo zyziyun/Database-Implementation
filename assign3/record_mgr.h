@@ -26,7 +26,7 @@ typedef struct RM_RecordMtdt{
 	int slotOffset;// free slot offset
 	int pageOffset;// page(block) offset
 	
-	BM_PageHandle *phSchema;// openTable -> schema header
+	BM_PageHandle *ph;// openTable -> page file
 	BM_BufferPool *bm;
 
 } RM_RecordMtdt;
