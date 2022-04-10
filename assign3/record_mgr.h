@@ -14,6 +14,16 @@ typedef struct RM_ScanHandle
 	void *mgmtData;
 } RM_ScanHandle;
 
+typedef struct RM_ScanMtdt
+{
+	Expr *expr;
+	int page;
+	int slot;
+	
+	int slotNum;
+	int pageNum;
+} RM_ScanMtdt;
+
 typedef struct RM_RecordMtdt{
 	int tupleLen; // exist's number of tuple 
 

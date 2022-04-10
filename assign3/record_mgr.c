@@ -2,6 +2,7 @@
 #include "storage_mgr.h"
 #include "buffer_mgr.h"
 #include "record_mgr.h"
+#include "expr.h"
 
 #include <math.h>
 #include <string.h>
@@ -336,6 +337,11 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
+
+	int currIndex = (id.page - 1) * (mgmtData->slotMax - 1) + (id.slot + 1);
+	if (currIndex > mgmtData->tupleLen) {
+		return RC_RM_NO_MORE_TUPLES;
+	}
 	
 	char str[mgmtData->slotLen];
 	record->id.page = id.page;
@@ -353,14 +359,44 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 
 // scans
 RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond) {
+	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
+	RM_ScanMtdt *scanMtdt = (RM_ScanMtdt *) malloc(sizeof(RM_ScanMtdt));
+	scanMtdt->expr = cond;
+	scanMtdt->page = 1;
+	scanMtdt->slot = 0;
+	scanMtdt->pageNum = mgmtData->pageOffset;
+	scanMtdt->slotNum = mgmtData->slotMax;
+	scan->rel = rel;
+	scan->mgmtData = scanMtdt;
 	return RC_OK;
 }
 
 RC next (RM_ScanHandle *scan, Record *record) {
+	RM_ScanMtdt *scanMtdt = (RM_ScanMtdt *)scan->mgmtData;
+	Value *value;
+	record->id.page = scanMtdt->page;
+	record->id.slot = scanMtdt->slot;
+	int result = getRecord(scan->rel, record->id, record);
+
+	if (result != RC_OK) {
+		return result;
+	}
+	evalExpr(record, scan->rel->schema, scanMtdt->expr, &value);
+	if (scanMtdt->slot + 1 >= scanMtdt->slotNum) {
+		scanMtdt->slot = 0;
+		scanMtdt->page += 1;
+	} else {
+		scanMtdt->slot += 1;
+	}
+	next(scan, record);
 	return RC_OK;
 }
 
 RC closeScan (RM_ScanHandle *scan) {
+	free(scan->rel->mgmtData);
+	free(scan->mgmtData);
+	free(scan->rel);
+	free(scan);
 	return RC_OK;
 }
 

@@ -78,7 +78,7 @@ main (void)
 	testName = "";
 
 	testInsertManyRecords();
-	// testRecords();
+	testRecords();
 	// testCreateTableAndInsert();
 	// testUpdateTable();
 	// testScans();
