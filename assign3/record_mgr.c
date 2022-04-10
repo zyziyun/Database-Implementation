@@ -294,8 +294,7 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 	return RC_OK;
 }
 
-RC
-getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
+RC getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 	// [1-0] (a:0,b:aaaa,c:3)
 	Value *value = (Value *) malloc(sizeof(Value));
 	char *temp;

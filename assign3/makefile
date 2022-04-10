@@ -14,4 +14,4 @@ test_expr: $(SOURCE2)
 	gcc -o $(TARGET2) $(SOURCE2) -g -lm
 
 clean:
-	rm -rf *.o $(TARGET1) $(TARGET2)
+	rm -rf *.o $(TARGET1) $(TARGET2) test_table_r test_table_t

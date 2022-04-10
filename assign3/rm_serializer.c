@@ -195,7 +195,7 @@ deserializeSchemaKeys(char *str, Schema *schema) {
 	}
 	int index = 0;
 	setKeyIndex(schema, temp, index);
-	while(temp = strtok(NULL, ",")) {
+	while(temp == strtok(NULL, ",")) {
 		index += 1;
 		setKeyIndex(schema, temp, index);
 	}
