@@ -28,6 +28,7 @@ typedef struct RM_RecordMtdt{
 	
 	BM_PageHandle *ph;// openTable -> page file
 	BM_BufferPool *bm;
+	BM_PageHandle *phSchema;
 
 } RM_RecordMtdt;
 

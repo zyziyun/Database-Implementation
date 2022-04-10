@@ -157,6 +157,7 @@ RC openTable (RM_TableData *rel, char *name) {
 	
 	mgmtData->bm = bm;
 	mgmtData->ph = ph;
+	mgmtData->phSchema = phSchema;
 	rel->mgmtData = mgmtData;
 	rel->name = name;
 	return RC_OK;
@@ -171,9 +172,13 @@ RC openTable (RM_TableData *rel, char *name) {
 RC closeTable (RM_TableData *rel) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	// write back header file to file system close buffer pool
-	// writeTableHeader(rel->name, mgmtData);
+	char *header = serializeRecordMtdt(mgmtData);
+	memcpy(mgmtData->phSchema->data, header, strlen(header));
+	markDirty(mgmtData->bm, mgmtData->phSchema);
+
 	shutdownBufferPool(mgmtData->bm);
 	free(mgmtData->ph);
+	free(mgmtData->phSchema);
 	free(rel->mgmtData);
 	free(rel->schema->attrNames);
 	free(rel->schema->dataTypes);
@@ -208,7 +213,7 @@ int getNumTuples (RM_TableData *rel) {
 void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
 	// offset: 1 | -1
 	mgmtData->tupleLen = mgmtData->tupleLen + offset;
-	if (mgmtData->slotOffset + offset > mgmtData->slotMax) {
+	if (mgmtData->slotOffset + offset >= mgmtData->slotMax) {
 		mgmtData->slotOffset = 0;
 		mgmtData->pageOffset = mgmtData->pageOffset + offset;
 	} else if (mgmtData->slotOffset + offset < 0) {
@@ -217,7 +222,6 @@ void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
 	} else {
 		mgmtData->slotOffset = mgmtData->slotOffset + offset;
 	}
-	
 }
 
 /**
