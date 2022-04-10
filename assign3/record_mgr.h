@@ -67,5 +67,7 @@ extern char *serializeRecordMtdt(RM_RecordMtdt *);
 extern RM_RecordMtdt *deserializeRecordMtdt(char *);
 extern Schema *deserializeSchema(char * str);
 extern RC attrOffset (Schema *, int, int *);
+extern int strtoi(char *, int);
+extern char *strtochar(char *, int);
 
 #endif // RECORD_MGR_H

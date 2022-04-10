@@ -171,7 +171,7 @@ RC openTable (RM_TableData *rel, char *name) {
 RC closeTable (RM_TableData *rel) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	// write back header file to file system close buffer pool
-	writeTableHeader(rel->name, mgmtData);
+	// writeTableHeader(rel->name, mgmtData);
 	shutdownBufferPool(mgmtData->bm);
 	free(mgmtData->ph);
 	free(rel->mgmtData);
@@ -289,18 +289,60 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 	return RC_OK;
 }
 
+RC
+getRecordDataFromSerialize(char *str, Schema *schema, Record *result) {
+	// [1-0] (a:0,b:aaaa,c:3)
+	Value *value;
+	char *temp;
+	int i;
+	char strcp[strlen(str)];
+
+	result->data = (char *) malloc(getRecordSize(schema));
+
+	strcpy(strcp, str);
+	strtok(strcp, "(");
+	for (i = 0; i < schema->numAttr; i++) {
+		strtok(NULL, ":");
+		char *delim = (i == schema->numAttr - 1) ? ")" : ",";
+		if (schema->dataTypes[i] == DT_INT) {
+			int a = strtoi(delim, 1);
+			MAKE_VALUE(value, DT_INT, a);
+		} else if (schema->dataTypes[i] == DT_BOOL) {
+			temp = strtok(NULL, delim);
+			bool b = temp[0] == 't' ? TRUE : FALSE;
+			MAKE_VALUE(value, DT_BOOL, b);
+		} else if (schema->dataTypes[i] == DT_FLOAT) {
+			float c;
+			temp = strtok(NULL, delim);
+			c = strtof(temp, NULL);
+			MAKE_VALUE(value, DT_FLOAT, c);
+		} else if (schema->dataTypes[i] == DT_STRING) {
+			char *d = strtochar(delim, 1);
+			MAKE_STRING_VALUE(value, d);
+		}
+		
+		setAttr(result, schema, i, value);
+		freeVal(value);
+	}
+	return RC_OK;
+}
+
+
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = mgmtData->ph;
 	BM_BufferPool *bm = mgmtData->bm;
 	
+	char str[mgmtData->slotLen];
 	record->id.page = id.page;
 	record->id.slot = id.slot;
 
 	pinPage(bm, ph, id.page);
 	int offset = record->id.slot * mgmtData->slotLen;
-	memcpy(record->data, ph->data + offset, mgmtData->slotLen);
+	memcpy(str, ph->data + offset, mgmtData->slotLen);
+	getRecordDataFromSerialize(str, rel->schema, record);
 	unpinPage(bm, ph);
+
 	return RC_OK;
 }
 
@@ -416,7 +458,12 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
 			memcpy(&((*value)->v.boolV), attrData, sizeof(bool));
 			break;
 		case DT_STRING:
-			strncpy((*value)->v.stringV, attrData, schema->typeLength[attrNum]);
+			{
+				char *str = (char*) malloc(schema->typeLength[attrNum] + 1);
+				strncpy(str, attrData, schema->typeLength[attrNum]);
+				str[schema->typeLength[attrNum]] = '\0';
+				(*value)->v.stringV = str;
+			}
 			break;
 	}
 	return RC_OK;

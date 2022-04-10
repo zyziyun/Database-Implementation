@@ -424,6 +424,10 @@ testInsertManyRecords(void)
 		RID rid = rids[i];
 		TEST_CHECK(getRecord(table, rid, r));
 		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, realInserts[i]), r, schema, "compare records");
+		// Record *_lR = fromTestRecord(schema, realInserts[i]);                                                   \
+		// Record *_rR = r;
+		// int ress = memcmp(_lR->data,_rR->data, getRecordSize(schema));
+		// printf("%i", ress);
 	}
     freeRecord(r);   // Added Summer 2021
 

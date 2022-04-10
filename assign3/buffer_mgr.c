@@ -194,11 +194,11 @@ RC shutdownBufferPool(BM_BufferPool *const bm) {
  * @author Yun Zi
  */
 void forceWriteSingle(BM_Frame * frame, BM_MgmtData *mgmt) {
-    // pthread_mutex_lock(&mgmt->mutexlock);
+    pthread_mutex_lock(&mgmt->mutexlock);
     writeBlock(frame->pageNum, mgmt->fh, frame->data);
     frame->dirtyflag = FALSE;
     mgmt->writeCount += 1;
-    // pthread_mutex_unlock(&mgmt->mutexlock);
+    pthread_mutex_unlock(&mgmt->mutexlock);
 }
 
 /**
