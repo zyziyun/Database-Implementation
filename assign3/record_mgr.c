@@ -295,40 +295,36 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 }
 
 RC
-getRecordDataFromSerialize(char *str, Schema *schema, Record *result) {
+getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 	// [1-0] (a:0,b:aaaa,c:3)
-	Value *value;
+	Value *value = (Value *) malloc(sizeof(Value));
 	char *temp;
 	int i;
 	char strcp[strlen(str)];
 
-	result->data = (char *) malloc(getRecordSize(schema));
+	(*result)->data = (char *) malloc(getRecordSize(schema));
 
 	strcpy(strcp, str);
 	strtok(strcp, "(");
+
 	for (i = 0; i < schema->numAttr; i++) {
 		strtok(NULL, ":");
 		char *delim = (i == schema->numAttr - 1) ? ")" : ",";
+		value->dt = schema->dataTypes[i];
 		if (schema->dataTypes[i] == DT_INT) {
-			int a = strtoi(delim, 1);
-			MAKE_VALUE(value, DT_INT, a);
+			value->v.intV = strtoi(delim, 1);
 		} else if (schema->dataTypes[i] == DT_BOOL) {
 			temp = strtok(NULL, delim);
-			bool b = temp[0] == 't' ? TRUE : FALSE;
-			MAKE_VALUE(value, DT_BOOL, b);
+			value->v.boolV = temp[0] == 't' ? TRUE : FALSE;
 		} else if (schema->dataTypes[i] == DT_FLOAT) {
-			float c;
 			temp = strtok(NULL, delim);
-			c = strtof(temp, NULL);
-			MAKE_VALUE(value, DT_FLOAT, c);
+			value->v.floatV = strtof(temp, NULL);
 		} else if (schema->dataTypes[i] == DT_STRING) {
-			char *d = strtochar(delim, 1);
-			MAKE_STRING_VALUE(value, d);
+			value->v.stringV = strtochar(delim, 1);
 		}
-		
-		setAttr(result, schema, i, value);
-		freeVal(value);
+		setAttr(*result, schema, i, value);
 	}
+	freeVal(value);
 	return RC_OK;
 }
 
@@ -350,7 +346,7 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	pinPage(bm, ph, id.page);
 	int offset = record->id.slot * mgmtData->slotLen;
 	memcpy(str, ph->data + offset, mgmtData->slotLen);
-	getRecordDataFromSerialize(str, rel->schema, record);
+	getRecordDataFromSerialize(str, rel->schema, &record);
 	unpinPage(bm, ph);
 
 	return RC_OK;

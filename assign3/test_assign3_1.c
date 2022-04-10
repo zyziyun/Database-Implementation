@@ -77,10 +77,10 @@ main (void)
 {
 	testName = "";
 
-	testInsertManyRecords();
-	testRecords();
+	// testInsertManyRecords();
+	// testRecords();
 	// testCreateTableAndInsert();
-	// testUpdateTable();
+	testUpdateTable();
 	// testScans();
 	// testScansTwo();
 	// testMultipleScans();
@@ -173,8 +173,8 @@ testCreateTableAndInsert (void)
 		RID rid = rids[pos];
 		TEST_CHECK(getRecord(table, rid, r));
 		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, inserts[pos]), r, schema, "compare records");
-        freeRecord (r);  // Added: Summer 2021
 	}
+	freeRecord(r);   // Added Summer 2021
 
 	TEST_CHECK(closeTable(table));
 	TEST_CHECK(deleteTable("test_table_r"));
@@ -425,7 +425,6 @@ testInsertManyRecords(void)
 		TEST_CHECK(getRecord(table, rid, r));
 		// printf("numInserts: %i -----------", i);
 		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, realInserts[i]), r, schema, "compare records");
-		
 	}
     freeRecord(r);   // Added Summer 2021
 
