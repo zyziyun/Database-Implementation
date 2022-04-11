@@ -81,9 +81,9 @@ main (void)
 	testRecords();
 	testCreateTableAndInsert();
 	testUpdateTable();
-	// testScans();
-	// testScansTwo();
-	// testMultipleScans();
+	testScans();
+	testScansTwo();
+	testMultipleScans();
 
 	return 0;
 }

@@ -340,7 +340,6 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	if (currIndex > mgmtData->tupleLen) {
 		return RC_RM_NO_MORE_TUPLES;
 	}
-	
 	char str[mgmtData->slotLen];
 	record->id.page = id.page;
 	record->id.slot = id.slot;
@@ -350,12 +349,11 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	memcpy(str, ph->data + offset, mgmtData->slotLen);
 
 	if (str[0] == 0 && str[1] == 0) {
-		return RC_RM_NO_MORE_TUPLES;
+		unpinPage(bm, ph);
+		return RC_RM_DELETED_TUPLES;
 	}
-
 	getRecordDataFromSerialize(str, rel->schema, &record);
 	unpinPage(bm, ph);
-
 	return RC_OK;
 }
 
@@ -379,11 +377,12 @@ RC next (RM_ScanHandle *scan, Record *record) {
 	Value *value;
 	record->id.page = scanMtdt->page;
 	record->id.slot = scanMtdt->slot;
-	int result = getRecord(scan->rel, record->id, record);
 
+	int result = getRecord(scan->rel, record->id, record);
 	if (result != RC_OK) {
 		return result;
 	}
+
 	evalExpr(record, scan->rel->schema, scanMtdt->expr, &value);
 	if (scanMtdt->slot + 1 >= scanMtdt->slotNum) {
 		scanMtdt->slot = 0;
@@ -391,15 +390,14 @@ RC next (RM_ScanHandle *scan, Record *record) {
 	} else {
 		scanMtdt->slot += 1;
 	}
-	next(scan, record);
+	if (value->v.boolV != TRUE) {
+		return next(scan, record);
+	}
 	return RC_OK;
 }
 
 RC closeScan (RM_ScanHandle *scan) {
-	free(scan->rel->mgmtData);
 	free(scan->mgmtData);
-	free(scan->rel);
-	free(scan);
 	return RC_OK;
 }
 
