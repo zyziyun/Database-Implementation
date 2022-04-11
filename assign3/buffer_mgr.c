@@ -84,7 +84,7 @@ void destoryFrameList(BM_FrameList *frameList) {
     BM_Frame *curr = frameList->head;
     while (curr) {
         curr->prev = NULL;
-        // free(curr->data);
+        free(curr->data);
         free(curr);
         curr = curr->next;
         frameList->head = curr;
@@ -406,6 +406,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         //     frame->data, 
         //     frame->pageNum
         // );
+
         if (frame->dirtyflag) {
             forceWriteSingle(frame, mgmt);
         }
@@ -422,6 +423,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         newFrame->prev = frame->prev;
         newFrame->next = frame->next;
         free(frame->data);
+        frame->data = NULL;
         free(frame);
         frame = newFrame;
     }

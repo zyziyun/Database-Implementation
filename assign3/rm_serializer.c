@@ -245,6 +245,7 @@ deserializeSchemaAttr(char *str_origin, Schema *schema) {
 		}
 	}
 	deserializeSchemaTypeLength(typeLengthTemp, schema);
+	free(typeLengthTemp);
 }
 
 Schema * 
@@ -271,6 +272,8 @@ deserializeSchema(char * str)
 	// split attr and key
 	deserializeSchemaAttr(attrs, schema);
 	deserializeSchemaKeys(keys, schema);
+	free(keys);
+	free(attrs);
 	return schema;
 }
 
@@ -327,7 +330,9 @@ serializeRecord(Record *record, Schema *schema)
 	for(i = 0; i < schema->numAttr; i++)
 	{
 		APPEND(result, "%s", (i == 0) ? "" : ",");
-		APPEND_STRING(result, serializeAttr (record, schema, i));
+		char *temp = serializeAttr (record, schema, i);
+		APPEND_STRING(result, temp);
+		free(temp);
 	}
 
 	APPEND_STRING(result, ")");

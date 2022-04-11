@@ -21,8 +21,8 @@
 				lSer = serializeValue(lVal); \
 				rSer = serializeValue(rVal); \
 				ASSERT_EQUALS_STRING(lSer, rSer, "attr same");	\
-				free(lVal); \
-				free(rVal); \
+				freeVal(lVal); \
+				freeVal(rVal); \
 				free(lSer); \
 				free(rSer); \
 			}									\
@@ -173,7 +173,9 @@ testCreateTableAndInsert (void)
 		int pos = rand() % numInserts;
 		RID rid = rids[pos];
 		TEST_CHECK(getRecord(table, rid, r));
-		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, inserts[pos]), r, schema, "compare records");
+		Record *l = fromTestRecord(schema, inserts[pos]);
+		ASSERT_EQUALS_RECORDS(l, r, schema, "compare records");
+		freeRecord (l);
         freeRecord (r);  // Added: Summer 2021
 	}
 
@@ -354,7 +356,9 @@ testUpdateTable (void)
 	{
 		RID rid = rids[i];
 		TEST_CHECK(getRecord(table, rid, r));
-		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, finalR[i]), r, schema, "compare records");
+		Record *l = fromTestRecord(schema, finalR[i]);
+		ASSERT_EQUALS_RECORDS(l, r, schema, "compare records");
+		freeRecord(l);
 	}
 
 	TEST_CHECK(closeTable(table));
@@ -422,7 +426,9 @@ testInsertManyRecords(void)
 	{
 		RID rid = rids[i];
 		TEST_CHECK(getRecord(table, rid, r));
-		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, realInserts[i]), r, schema, "compare records");
+		Record *l = fromTestRecord(schema, realInserts[i]);
+		ASSERT_EQUALS_RECORDS(l, r, schema, "compare records");
+		freeRecord(l);
 	}
     freeRecord(r);   // Added Summer 2021
 
@@ -630,8 +636,10 @@ void testScansTwo (void)
 		serializeRecord(r, schema);
 		for(i = 0; i < numInserts; i++)
 		{
-			if (memcmp(fromTestRecord(schema, inserts[i])->data,r->data,getRecordSize(schema)) == 0)
+			Record *l = fromTestRecord(schema, inserts[i]);
+			if (memcmp(l->data,r->data,getRecordSize(schema)) == 0)
 				foundScan[i] = TRUE;
+			freeRecord(l);
 		}
 	}
 	if (rc != RC_RM_NO_MORE_TUPLES)

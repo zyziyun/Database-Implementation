@@ -103,7 +103,9 @@ RC writeStrToPage(char *name, int pageNum, char *str) {
  */
 RC writeTableHeader(char *name, RM_RecordMtdt *recordMtdt) {
 	char * headerStr = serializeRecordMtdt(recordMtdt);
-	return writeStrToPage(name, 0, headerStr);
+	writeStrToPage(name, 0, headerStr);
+	free(headerStr);
+	return RC_OK;
 }
 
 /**
@@ -132,6 +134,7 @@ RC createTable (char *name, Schema *schema) {
 	recordMtdt->slotMax = (int)(floor(PAGE_SIZE/recordMtdt->slotLen));
 
 	result = writeTableHeader(name, recordMtdt);
+	free(recordMtdt->schemaStr);
 	free(recordMtdt);
 	return result;
 }
@@ -176,10 +179,12 @@ RC closeTable (RM_TableData *rel) {
 	char *header = serializeRecordMtdt(mgmtData);
 	memcpy(mgmtData->phSchema->data, header, strlen(header));
 	markDirty(mgmtData->bm, mgmtData->phSchema);
+	free(header);
 
 	shutdownBufferPool(mgmtData->bm);
 	free(mgmtData->ph);
 	free(mgmtData->phSchema);
+	free(mgmtData->schemaStr);
 	free(rel->mgmtData);
 	free(rel->schema->attrNames);
 	free(rel->schema->dataTypes);
@@ -299,19 +304,18 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 
 RC getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 	// [1-0] (a:0,b:aaaa,c:3)
-	Value *value = (Value *) malloc(sizeof(Value));
 	char *temp;
 	int i;
 	char strcp[strlen(str)];
 
-	(*result)->data = (char *) malloc(getRecordSize(schema));
-
+	// (*result)->data = (char *) malloc(getRecordSize(schema));
 	strcpy(strcp, str);
 	strtok(strcp, "(");
 
 	for (i = 0; i < schema->numAttr; i++) {
 		strtok(NULL, ":");
 		char *delim = (i == schema->numAttr - 1) ? ")" : ",";
+		Value *value = (Value *) malloc(sizeof(Value));
 		value->dt = schema->dataTypes[i];
 		if (schema->dataTypes[i] == DT_INT) {
 			value->v.intV = strtoi(delim, 1);
@@ -325,8 +329,8 @@ RC getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 			value->v.stringV = strtochar(delim, 1);
 		}
 		setAttr(*result, schema, i, value);
+		freeVal(value);
 	}
-	freeVal(value);
 	return RC_OK;
 }
 
