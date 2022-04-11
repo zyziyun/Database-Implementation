@@ -421,7 +421,7 @@ RC pinPage (BM_BufferPool *const bm, BM_PageHandle *const page,
         }
         newFrame->prev = frame->prev;
         newFrame->next = frame->next;
-        // free(frame->data);
+        free(frame->data);
         free(frame);
         frame = newFrame;
     }
