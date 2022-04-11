@@ -80,7 +80,7 @@ main (void)
 	testInsertManyRecords();
 	testRecords();
 	testCreateTableAndInsert();
-	// testUpdateTable();
+	testUpdateTable();
 	// testScans();
 	// testScansTwo();
 	// testMultipleScans();
@@ -328,6 +328,7 @@ testUpdateTable (void)
 	}
 
 	// delete rows from table
+	TEST_CHECK(createRecord(&r, schema)); // Added Summer 2021
 	for(i = 0; i < numDeletes; i++)
 	{
 		TEST_CHECK(deleteRecord(table,rids[deletes[i]]));

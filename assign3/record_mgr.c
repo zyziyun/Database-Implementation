@@ -269,11 +269,14 @@ RC deleteRecord (RM_TableData *rel, RID id) {
 	pinPage(bm, ph, id.page);
 	// Todo: NOT SURE how to clear parts of memory
 	int offset = id.slot * mgmtData->slotLen;
-	memcpy(ph->data + offset, "\0", mgmtData->slotLen);
+	char *str = (char *)calloc(mgmtData->slotLen, 1);
+
+	memcpy(ph->data + offset, str, mgmtData->slotLen);
 	markDirty(bm, ph);
 	unpinPage(bm, ph);
 
 	updateRecordOffset(mgmtData, -1);
+	free(str);
 	return RC_OK;
 }
 
@@ -345,6 +348,11 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	pinPage(bm, ph, id.page);
 	int offset = record->id.slot * mgmtData->slotLen;
 	memcpy(str, ph->data + offset, mgmtData->slotLen);
+
+	if (str[0] == 0 && str[1] == 0) {
+		return RC_RM_NO_MORE_TUPLES;
+	}
+
 	getRecordDataFromSerialize(str, rel->schema, &record);
 	unpinPage(bm, ph);
 
@@ -456,7 +464,7 @@ RC freeSchema (Schema *schema) {
  * @return RC 
  */
 RC createRecord (Record **record, Schema *schema) {
-	*record = (Record *) malloc(sizeof(Record));
+	(*record) = (Record *) malloc(sizeof(Record));
 	(*record)->data = (char *) malloc(getRecordSize(schema));
 	return RC_OK;
 }
