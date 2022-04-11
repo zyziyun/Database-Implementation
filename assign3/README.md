@@ -42,7 +42,7 @@
 13. next(): Gets the next record in a table
 14. closeScan(): Closes the initalizes scan
 15. getRecordSize(): Gets the size of each record provided a schema
-16. *createSchema(): Creates the schema of the table
+16. *createSchema(): Creates a memory space and the schema of the table
 17. freeSchema(): Frees a given schema
 18. createRecord(): Creates a blank record in a given schema 
 19. freeRecord(): Frees a given record
