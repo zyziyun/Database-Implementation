@@ -81,14 +81,17 @@ BM_Frame *initFrame(int frameNum) {
  * @author Yun Zi
  */
 void destoryFrameList(BM_FrameList *frameList) {
-    BM_Frame *curr = frameList->head;
-    while (curr) {
-        curr->prev = NULL;
-        free(curr->data);
-        free(curr);
-        curr = curr->next;
-        frameList->head = curr;
+  
+    if(frameList->head != NULL){
+        BM_Frame *curr = frameList->head;
+        BM_Frame *next = NULL;
+        while (curr) {
+            next = curr ->next;
+            free(curr);
+            curr = next;
+        }
     }
+   
     frameList->head = frameList->tail = NULL;
     free(frameList);
     frameList = NULL;
