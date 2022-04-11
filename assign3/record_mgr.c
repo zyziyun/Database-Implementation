@@ -140,7 +140,7 @@ RC createTable (char *name, Schema *schema) {
 }
 
 /**
- * @brief 
+ * @brief opens the table with the provided name
  * 
  * @param rel 
  * @param name 
@@ -195,7 +195,7 @@ RC closeTable (RM_TableData *rel) {
 }
 
 /**
- * @brief 
+ * @brief deletes the table with given name
  * 
  * @param name 
  * @return RC 
@@ -215,7 +215,13 @@ int getNumTuples (RM_TableData *rel) {
 	return mgmtData->tupleLen;
 }
 
-
+/**
+ * @brief updates offset of record
+ * 
+ * @param mgmtData 
+ * @param offset
+ * @return void
+ */
 void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
 	// offset: 1 | -1
 	mgmtData->tupleLen = mgmtData->tupleLen + offset;
@@ -231,7 +237,7 @@ void updateRecordOffset (RM_RecordMtdt *mgmtData, int offset) {
 }
 
 /**
- * @brief 
+ * @brief inserts a record to the table
  * 
  * @param rel 
  * @param record 
@@ -260,7 +266,7 @@ RC insertRecord (RM_TableData *rel, Record *record) {
 }
 
 /**
- * @brief 
+ * @brief deletes a record from the table
  * 
  * @param rel 
  * @param id 
@@ -285,6 +291,13 @@ RC deleteRecord (RM_TableData *rel, RID id) {
 	return RC_OK;
 }
 
+/**
+ * @brief updates table in a record
+ * 
+ * @param rel
+ * @param record 
+ * @return RC 
+ */
 RC updateRecord (RM_TableData *rel, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = mgmtData->ph;
@@ -302,6 +315,12 @@ RC updateRecord (RM_TableData *rel, Record *record) {
 	return RC_OK;
 }
 
+/**
+ * @brief gets data from serialize
+ * 
+ * @param mgmtData 
+ * @return RC 
+ */
 RC getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 	// [1-0] (a:0,b:aaaa,c:3)
 	char *temp;
@@ -334,7 +353,14 @@ RC getRecordDataFromSerialize(char *str, Schema *schema, Record **result) {
 	return RC_OK;
 }
 
-
+/**
+ * @brief gets a record from a provided table and RID 
+ * 
+ * @param rel
+ * @param id
+ * @param record 
+ * @return RC 
+ */
 RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	BM_PageHandle *ph = mgmtData->ph;
@@ -361,8 +387,15 @@ RC getRecord (RM_TableData *rel, RID id, Record *record) {
 	return RC_OK;
 }
 
-
-// scans
+//scan
+/**
+ * @brief initializes a new scan
+ * 
+ * @param rel
+ * @param scan
+ * @param cond 
+ * @return RC 
+ */
 RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond) {
 	RM_RecordMtdt *mgmtData = (RM_RecordMtdt *) rel->mgmtData;
 	RM_ScanMtdt *scanMtdt = (RM_ScanMtdt *) malloc(sizeof(RM_ScanMtdt));
@@ -376,6 +409,13 @@ RC startScan (RM_TableData *rel, RM_ScanHandle *scan, Expr *cond) {
 	return RC_OK;
 }
 
+/**
+ * @brief gets the next record in a table
+ * 
+ * @param scan
+ * @param record 
+ * @return RC 
+ */
 RC next (RM_ScanHandle *scan, Record *record) {
 	RM_ScanMtdt *scanMtdt = (RM_ScanMtdt *)scan->mgmtData;
 	Value *value;
@@ -400,12 +440,24 @@ RC next (RM_ScanHandle *scan, Record *record) {
 	return RC_OK;
 }
 
+/**
+ * @brief closes the initalizes scan
+ * 
+ * @param scan 
+ * @return RC 
+ */
 RC closeScan (RM_ScanHandle *scan) {
 	free(scan->mgmtData);
 	return RC_OK;
 }
 
 // dealing with schemas
+/**
+ * @brief gets the size of each record provided a schema
+ * 
+ * @param schema 
+ * @return int 
+ */
 int getRecordSize (Schema *schema) {
 	int len = 0, i = 0;
 	for (i = 0; i < schema->numAttr; i++) {
@@ -452,6 +504,12 @@ Schema *createSchema (int numAttr, char **attrNames, DataType *dataTypes, int *t
 	return schema;
 }
 
+/**
+ * @brief frees a given schema
+ * 
+ * @param schema 
+ * @return RC 
+ */
 RC freeSchema (Schema *schema) {
 	free(schema);
 	return RC_OK;
@@ -472,7 +530,7 @@ RC createRecord (Record **record, Schema *schema) {
 }
 
 /**
- * @brief 
+ * @brief frees a given record
  * 
  * @param record 
  * @return RC 
@@ -483,6 +541,15 @@ RC freeRecord (Record *record) {
 	return RC_OK;
 }
 
+/**
+ * @brief gets attribute from record
+ * 
+ * @param record
+ * @param schema
+ * @param attrNum
+ * @param value 
+ * @return RC 
+ */
 RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
 	*value = (Value *) malloc(sizeof(Value*));
 	int offset;
@@ -514,6 +581,15 @@ RC getAttr (Record *record, Schema *schema, int attrNum, Value **value) {
 	return RC_OK;
 }
 
+/**
+ * @brief sets attribute for given record
+ * 
+ * @param record
+ * @param schema
+ * @param attrNum
+ * @param value 
+ * @return RC 
+ */
 RC setAttr (Record *record, Schema *schema, int attrNum, Value *value) {
 	int offset;
 	char *attrData;
