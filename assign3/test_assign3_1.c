@@ -157,24 +157,25 @@ testCreateTableAndInsert (void)
 
 	// insert rows into table
 	for(i = 0; i < numInserts; i++)
-	{
+    {
 		r = fromTestRecord(schema, inserts[i]);
 		TEST_CHECK(insertRecord(table,r));
 		rids[i] = r->id;
-	}
+        freeRecord(r);    // added Fall 2021
+    }
 
 	TEST_CHECK(closeTable(table));
 	TEST_CHECK(openTable(table, "test_table_r"));
 
 	// randomly retrieve records from the table and compare to inserted ones
 	for(i = 0; i < 1000; i++)
-	{
+	{   TEST_CHECK(createRecord(&r, schema));  // added Fall 2021
 		int pos = rand() % numInserts;
 		RID rid = rids[pos];
 		TEST_CHECK(getRecord(table, rid, r));
 		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, inserts[pos]), r, schema, "compare records");
+        freeRecord (r);  // Added: Summer 2021
 	}
-	freeRecord(r);   // Added Summer 2021
 
 	TEST_CHECK(closeTable(table));
 	TEST_CHECK(deleteTable("test_table_r"));
@@ -309,11 +310,10 @@ testUpdateTable (void)
 	Record *r;
 	RID *rids;
 	Schema *schema;
-	printf("i get here");
 	testName = "test creating a new table and insert,update,delete tuples";
 	schema = testSchema();
 	rids = (RID *) malloc(sizeof(RID) * numInserts);
-	
+
 	TEST_CHECK(initRecordManager(NULL));
 	TEST_CHECK(createTable("test_table_r",schema));
 	TEST_CHECK(openTable(table, "test_table_r"));
@@ -328,7 +328,7 @@ testUpdateTable (void)
 	}
 
 	// delete rows from table
-	TEST_CHECK(createRecord(&r, schema)); // Added Summer 2021
+    TEST_CHECK(createRecord(&r, schema)); // added Fall 2021
 	for(i = 0; i < numDeletes; i++)
 	{
 		TEST_CHECK(deleteRecord(table,rids[deletes[i]]));
@@ -398,13 +398,11 @@ testInsertManyRecords(void)
 	testName = "test creating a new table and inserting 10000 records then updating record from rids[3333]";
 	schema = testSchema();
 	rids = (RID *) malloc(sizeof(RID) * numInserts);
-	
+
 	TEST_CHECK(initRecordManager(NULL));
-	
 	TEST_CHECK(createTable("test_table_t",schema));
-	
 	TEST_CHECK(openTable(table, "test_table_t"));
-	
+
 	// insert rows into table
 	for(i = 0; i < numInserts; i++)
 	{
@@ -424,7 +422,6 @@ testInsertManyRecords(void)
 	{
 		RID rid = rids[i];
 		TEST_CHECK(getRecord(table, rid, r));
-		// printf("numInserts: %i -----------", i);
 		ASSERT_EQUALS_RECORDS(fromTestRecord(schema, realInserts[i]), r, schema, "compare records");
 	}
     freeRecord(r);   // Added Summer 2021
