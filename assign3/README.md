@@ -6,7 +6,7 @@
 # Test Results:
 - Environment: 'Ubuntu 20.0.4 LTS'(gcc version 9.3.0) and 'mac OS 12.1'(gcc version clang-1300.0.29.30)
 - Pass all tests(100%), function coverage(100%)
-- Include `test_assign3_1`, `test_expr`, we also add `more test` to guarantee quality.
+- Include `test_assign3_1`, `test_expr`, we also change `test` to avoid memory leak.
 
 # Summary
 - Implemented handling of tables with a fixed schema
@@ -25,6 +25,19 @@
 3. writeTableHeader(): Updates the table header
 4. updateRecordOffset(): Updates the available offset of in the record
 5. getRecordDataFromSerialize(): Gets the data from serialize
+
+## serialize/deserialize function
+- we also implement more serializer and deserializer function
+1. deserializeSchema(): deserialize schema from page 0
+2. deserializeSchemaAttr(): deserialize schema attribute
+3. deserializeSchemaTypeLength(): deserialize schema string length
+4. deserializeSchemaKeys(): deserialize schema keys
+5. deserializeRecordMtdt(): deserialize record metadata
+6. serializeRecordMtdt(): serialize record metadata
+7. strtoi(): split string and get int
+8. strtochar(): cut down string and copy to new string
+9. trim(): remove blank from string
+
 
 ## main function
 1. initRecordManager(): Initializes the record manager
