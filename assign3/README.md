@@ -8,14 +8,26 @@
 - Pass all tests(100%), function coverage(100%)
 - Include `test_assign3_1`, `test_expr`, we also change `test` to avoid memory leak.
 
-# Summary
-- Implemented handling of tables with a fixed schema
-- We allow for `create`, `insert`, `update`, `scan`, and `delete` on records 
+# key question
+- how to index each table? name -> file (1 vs 1)
+- how to store datas of table? tuple(base on slot index)
+- how to know table structure? schema(fixed) -> metadata
+- how to know free slot? page offset(id.page) + slot offset(id.slot)
+- how to store data to file and how to get data from file? serialize the data to string and deserializ datas to memory
+
+# data structure
+```
+file(table) -> page(block, start from page 1) -> slot(tuple)
+            -> metadata(page 0) -> schema and other message
+```
+- typedef struct RM_RecordMtdt: store metadata of table
+- typedef struct RM_ScanMtdt: store metadata of scan operation
 
 # compile and run
 1. cd assign3/
 2. make clean && make 
 3. ./test_assign3_1 && ./test_expr
+
 
 # API
 
