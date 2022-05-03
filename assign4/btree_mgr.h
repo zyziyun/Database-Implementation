@@ -13,28 +13,36 @@ typedef struct BTreeHandle {
   void *mgmtData;
 } BTreeHandle;
 
+typedef enum NodeType {
+	Inner_NODE = 1,
+	LEAF_NODE = 0
+} NodeType;
+
+typedef struct BTreeNode {
+  NodeType type;
+  Value **keys; // array[0...n]
+  // leaf-node => RID
+  // non-leaf-node => next level node
+  void **ptrs; // array[0...n]
+  int keyNums; // the count of key
+
+  struct BTreeNode *next; // sibling
+  struct BTreeNode *parent; // parent
+} BTreeNode;
+
 typedef struct BTreeMtdt {
   int n; // maximum keys in each block
   int nodes; // the count of node
   int entries; // the count of entries
   DataType keyType;
 
+  BTreeNode *root;
+
   BM_PageHandle *ph;
   BM_BufferPool *bm;
 } BTreeMtdt;
 
-typedef enum NodeType {
-	ROOT_NODE = 0,
-	Inner_NODE = 1,
-	LEAF_NODE = 3
-} NodeType;
 
-typedef struct BTreeNode {
-  NodeType type;
-  Value **key;
-  void **ptr;
-  struct BTreeNode *next;
-} BTreeNode;
 
 typedef struct BT_ScanHandle {
   BTreeHandle *tree;

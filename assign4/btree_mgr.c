@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // init and shutdown index manager
 RC initIndexManager (void *mgmtData) {
@@ -99,7 +100,12 @@ RC openBtree (BTreeHandle **tree, char *idxId) {
 	BM_PageHandle *phHeader = MAKE_PAGE_HANDLE();
   	initBufferPool(bm, idxId, 10, RS_LRU, NULL);
 	pinPage(bm, phHeader, 0);  
-    BTreeMtdt *mgmtData = deserializeBtreeHeader(phHeader->data);    
+    BTreeMtdt *mgmtData = deserializeBtreeHeader(phHeader->data);
+
+    if (mgmtData->nodes == 0) {
+        mgmtData->root = NULL;
+    }
+    
     mgmtData->ph = ph;
     mgmtData->bm = bm;
     (*tree)->keyType = mgmtData->keyType;
@@ -177,48 +183,192 @@ RC getKeyType (BTreeHandle *tree, DataType *result) {
     return RC_OK;
 }
 
-// index access
-RC findKey (BTreeHandle *tree, Value *key, RID *result) {
-    // key not in tree
-    // return RC_IM_KEY_NOT_FOUND;
+/**
+ * @brief   if key > sign: 1; 
+ *          if key < sign: -1; 
+ *          if key == sign: 0;
+ *          if key != sign: -1; // bool
+ * 
+ * @param key 
+ * @param realkey 
+ * @return int 
+ */
+int
+compareValue(Value *key, Value *sign) {
+    int result;
+    switch (key->dt)
+    {
+        case DT_INT:
+            if (key->v.intV == sign->v.intV) {
+                result = 0;
+            }
+            result = (key->v.intV > sign->v.intV) ? 1 : -1;
+            break;
+        case DT_FLOAT:
+            if (key->v.floatV == sign->v.floatV) {
+                result = 0;
+            }
+            result = (key->v.floatV > sign->v.floatV) ? 1 : -1;
+            break;
+        case DT_STRING:
+            result = strcmp(key->v.stringV, sign->v.stringV);
+            break;
+        case DT_BOOL:
+            // Todo: not confirm
+            result = (key->v.boolV == sign->v.boolV) ? 0 : -1;
+        default:
+            break;
+    }
+    return result;
+}
 
+/**
+ * @brief find leaf node
+ * 
+ * @param node 
+ * @param key 
+ * @return BTreeNode* 
+ */
+BTreeNode* findLeafNode(BTreeNode *node, Value *key) {
+    if (node->type == LEAF_NODE) {
+        return node;
+    }
+    for (int i = 0; i < node->keyNums; i++) {
+        if (compareValue(key, node->keys[i]) < 0) {
+            return findLeafNode((BTreeNode *) node->ptrs[i], key);
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief find entry in node
+ * 
+ * @param node 
+ * @param key 
+ * @return RID* 
+ */
+RID *
+findEntryInNode(BTreeNode *node, Value *key) {
+    for (int i = 0; i < node->keyNums; i++) {
+        if (compareValue(key, node->keys[i]) == 0) {
+            return (RID *) node->ptrs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief find key
+ * 
+ * @param tree 
+ * @param key 
+ * @param result 
+ * @return RC 
+ */
+RC findKey (BTreeHandle *tree, Value *key, RID *result) {
+    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
     // 1. Find correct leaf node L for k
-    // findLeafNode();
+    BTreeNode* leafNode = findLeafNode(mgmtData->root, key);
+    if (leafNode == NULL) {
+        return RC_IM_KEY_NOT_FOUND;
+    }
     // 2. Find the position of entry in a node, binary search
-    // findEntryInNode();
-    
+    result = findEntryInNode(leafNode, key);
+    if (result == NULL) {
+        return RC_IM_KEY_NOT_FOUND;
+    }
     return RC_OK;
 }
 
+/**
+ * @brief Create a Node object block
+ * 
+ * @param mgmtData 
+ * @return BTreeNode* 
+ */
 BTreeNode *
-createLeafNode(Value **key, RID *rid) {
+createNode(BTreeMtdt *mgmtData) {
+    int n = mgmtData->n;
+    mgmtData->nodes += 1;
     BTreeNode * node = MAKE_TREE_NODE();
-    node->key = key;
-    node->ptr = (void *) rid;
+    node->keys = malloc(n * sizeof(Value *));
+    node->ptrs = malloc(n * sizeof(void *));
+    node->keyNums = 0;
+    node->type = Inner_NODE;
+    node->next = NULL;
+    node->parent = NULL;
+    return node;
+}
+
+/**
+ * @brief Create a Leaf Node object Block
+ * 
+ * @param mgmtData 
+ * @return BTreeNode* 
+ */
+BTreeNode *
+createLeafNode(BTreeMtdt *mgmtData) {
+    BTreeNode * node = createNode(mgmtData);
     node->type = LEAF_NODE;
     return node;
 }
 
+
+void
+insertIntoLeafNode(BTreeNode* node,  Value *key, RID *rid, BTreeMtdt *mgmtData) {
+    int insert_pos = node->keyNums - 1;
+    for (int i = 0; i < node->keyNums; i++) {
+        if (compareValue(node->keys[i], key) == 1) {
+            insert_pos = i;
+            break;
+        }
+    }
+    for (int i = node->keyNums; i > insert_pos; i--) {
+        node->keys[i] = node->keys[i-1];
+        node->ptrs[i] = node->ptrs[i-1];
+    }
+    node->keys[insert_pos] = key;
+    node->ptrs[insert_pos] = rid;
+    node->keyNums += 1;
+    mgmtData->entries += 1;
+}
+
+void
+splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
+    BTreeNode * new_node = createLeafNode(mgmtData);
+
+    // split right index
+    int rpoint = ceil(node->keyNums / 2);
+    
+
+    
+    node->next = new_node;
+}
+
 // bottom-up strategy
 RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
-    // create new key node
-    // BTreeNode *node = createLeafNode(&key, &rid);
-
-    // this key is already stored in the b-tree
-    // return RC_IM_KEY_ALREADY_EXISTS;
-
+    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
+    if (mgmtData->root == NULL) {
+        mgmtData->root = createLeafNode(mgmtData);
+    }
     // 1. Find correct leaf node L for k
-    // findLeafNode();
+    BTreeNode* leafNode = findLeafNode(mgmtData->root, key);
+    // this key is already stored in the b-tree
+    if (findEntryInNode(leafNode, key)) {
+        return RC_IM_KEY_ALREADY_EXISTS;
+    }
     // 2. Add new entry into L in sorted order
-    // insertIntoLeafNode();
+    insertIntoLeafNode(leafNode, key, &rid, mgmtData);
     // If L has enough space, the operation done
-    // if (...) {
-        // return RC_OK;
-    // }
+    if (leafNode->keyNums <= mgmtData->n) {
+        return RC_OK;
+    }
     // Otherwise
     // Split L into two nodes L and L2
+    splitLeafNode(leafNode, mgmtData);
     // Redistribute entries evenly and copy up middle key (new leaf's smallest key)
-    // splitLeafNode();
+    
     // 3. Insert index entry pointing to L2 into parent of L
     // To split an inner node, redistrubute entries evenly, but push up the middle key
     // insertIntoNonLeafNode(); // Resursive function
@@ -232,8 +382,9 @@ RC deleteKey (BTreeHandle *tree, Value *key) {
 }
 
 RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
-    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
     *handle = MAKE_TREE_SCAN();
+    (*handle)->tree = tree;
+    
     return RC_OK;
 }
 
