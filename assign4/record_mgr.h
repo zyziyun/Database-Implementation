@@ -7,6 +7,7 @@
 #include "storage_mgr.h"
 #include "buffer_mgr.h"
 
+
 // Bookkeeping for scans
 typedef struct RM_ScanHandle
 {
@@ -74,6 +75,7 @@ extern RC freeRecord (Record *record);
 extern RC getAttr (Record *record, Schema *schema, int attrNum, Value **value);
 extern RC setAttr (Record *record, Schema *schema, int attrNum, Value *value);
 
+extern RC writeStrToPage(char *, int , char *);
 extern char *serializeRecordMtdt(RM_RecordMtdt *);
 extern RM_RecordMtdt *deserializeRecordMtdt(char *);
 extern Schema *deserializeSchema(char * str);

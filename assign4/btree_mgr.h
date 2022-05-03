@@ -1,6 +1,8 @@
 #ifndef BTREE_MGR_H
 #define BTREE_MGR_H
 
+#include "storage_mgr.h"
+#include "buffer_mgr.h"
 #include "dberror.h"
 #include "tables.h"
 
@@ -11,10 +13,45 @@ typedef struct BTreeHandle {
   void *mgmtData;
 } BTreeHandle;
 
+typedef struct BTreeMtdt {
+  int n; // maximum keys in each block
+  int nodes; // the count of node
+  int entries; // the count of entries
+  DataType keyType;
+
+  BM_PageHandle *ph;
+  BM_BufferPool *bm;
+} BTreeMtdt;
+
+typedef enum NodeType {
+	ROOT_NODE = 0,
+	Inner_NODE = 1,
+	LEAF_NODE = 3
+} NodeType;
+
+typedef struct BTreeNode {
+  NodeType type;
+  Value **key;
+  void **ptr;
+  struct BTreeNode *next;
+} BTreeNode;
+
 typedef struct BT_ScanHandle {
   BTreeHandle *tree;
   void *mgmtData;
 } BT_ScanHandle;
+
+#define MAKE_TREE_HANDLE()				\
+		((BTreeHandle *) malloc (sizeof(BTreeHandle)))
+
+#define MAKE_TREE_MTDT()				\
+		((BTreeMtdt *) malloc (sizeof(BTreeMtdt)))
+
+#define MAKE_TREE_NODE()				\
+		((BTreeNode *) malloc (sizeof(BTreeNode)))
+
+#define MAKE_TREE_SCAN()				\
+		((BT_ScanHandle *) malloc (sizeof(BT_ScanHandle)))
 
 // init and shutdown index manager
 extern RC initIndexManager (void *mgmtData);

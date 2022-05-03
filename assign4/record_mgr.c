@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 int MAX_BUFFER_NUMS = 10;
 ReplacementStrategy REPLACE_STRATEGY = RS_LFU;
 
