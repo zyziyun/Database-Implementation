@@ -289,13 +289,11 @@ RC findKey (BTreeHandle *tree, Value *key, RID *result) {
  */
 BTreeNode *
 createNode(BTreeMtdt *mgmtData) {
-    int n = mgmtData->n;
     mgmtData->nodes += 1;
     BTreeNode * node = MAKE_TREE_NODE();
-    node->keys = malloc(n * sizeof(Value *));
-    node->ptrs = malloc(n * sizeof(void *));
+    // insert first and then split
+    node->keys = malloc((mgmtData->n+1) * sizeof(Value *));
     node->keyNums = 0;
-    node->type = Inner_NODE;
     node->next = NULL;
     node->parent = NULL;
     return node;
@@ -311,20 +309,42 @@ BTreeNode *
 createLeafNode(BTreeMtdt *mgmtData) {
     BTreeNode * node = createNode(mgmtData);
     node->type = LEAF_NODE;
+    node->ptrs = (void *)malloc((mgmtData->n+1) * sizeof(void *));
     return node;
 }
 
+BTreeNode *
+createNonLeafNode(BTreeMtdt *mgmtData) {
+    BTreeNode * node = createNode(mgmtData);
+    node->type = Inner_NODE;
+    node->ptrs = (void *)malloc((mgmtData->n+2) * sizeof(void *));
+    return node;
+}
 
-void
-insertIntoLeafNode(BTreeNode* node,  Value *key, RID *rid, BTreeMtdt *mgmtData) {
-    int insert_pos = node->keyNums - 1;
+int 
+getInsertPos(BTreeNode* node, Value *key) {
+    int insert_pos = node->keyNums;
     for (int i = 0; i < node->keyNums; i++) {
         if (compareValue(node->keys[i], key) == 1) {
             insert_pos = i;
             break;
         }
     }
-    for (int i = node->keyNums; i > insert_pos; i--) {
+    return insert_pos;
+}
+
+/**
+ * @brief insert entry into leaf node
+ * 
+ * @param node 
+ * @param key 
+ * @param rid 
+ * @param mgmtData 
+ */
+void 
+insertIntoLeafNode(BTreeNode* node,  Value *key, RID *rid, BTreeMtdt *mgmtData) {
+    int insert_pos = getInsertPos(node, key);
+    for (int i = node->keyNums; i >= insert_pos; i--) {
         node->keys[i] = node->keys[i-1];
         node->ptrs[i] = node->ptrs[i-1];
     }
@@ -334,19 +354,59 @@ insertIntoLeafNode(BTreeNode* node,  Value *key, RID *rid, BTreeMtdt *mgmtData) 
     mgmtData->entries += 1;
 }
 
-void
+/**
+ * @brief split leaf node
+ * 
+ * @param node 
+ * @param mgmtData 
+ */
+BTreeNode *
 splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
     BTreeNode * new_node = createLeafNode(mgmtData);
-
     // split right index
     int rpoint = ceil(node->keyNums / 2);
-    
-
-    
+    for (int i = rpoint; i < node->keyNums; i++) {
+        int index = node->keyNums - rpoint - 1;
+        new_node->keys[index] = node->keys[i];
+        new_node->ptrs[index] = node->ptrs[i];
+        node->keys[i] = NULL;
+        node->ptrs[i] = NULL;
+        new_node->keyNums += 1;
+        node->keyNums -= 1;
+    }
     node->next = new_node;
+    new_node->parent = node->parent;
+    return new_node;
 }
 
-// bottom-up strategy
+// insert key to parent
+BTreeNode *
+insertIntoNonLeafNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
+    BTreeNode* rnode = lnode->next;
+    if (rnode->parent == NULL) {
+        rnode->parent = createNonLeafNode(mgmtData);
+        rnode->ptrs[0] = lnode;
+    }
+    BTreeNode *parent = rnode->parent;
+    int insert_pos = getInsertPos(parent, key);
+    for (int i = parent->keyNums; i >= insert_pos; i--) {
+        parent->keys[i] = parent->keys[i-1];
+        parent->ptrs[i+1] = parent->ptrs[i];
+    }
+    parent->keys[insert_pos] = key;
+    parent->ptrs[insert_pos + 1] = rnode;
+    parent->keyNums += 1;
+
+    // if ()
+}
+/**
+ * @brief insert key to B+Tree
+ *        bottom-up strategy
+ * @param tree 
+ * @param key 
+ * @param rid 
+ * @return RC 
+ */
 RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
     BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
     if (mgmtData->root == NULL) {
@@ -366,10 +426,14 @@ RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
     }
     // Otherwise
     // Split L into two nodes L and L2
-    splitLeafNode(leafNode, mgmtData);
+    BTreeNode * rnode = splitLeafNode(leafNode, mgmtData);
     // Redistribute entries evenly and copy up middle key (new leaf's smallest key)
-    
-    // 3. Insert index entry pointing to L2 into parent of L
+    Value *middlekey = rnode->keys[0];
+    Value *new_key = (Value *) malloc(sizeof(Value));
+    memcpy(new_key, middlekey, sizeof(*new_key));
+    // Insert index entry pointing to L2 into parent of L
+    insertIntoNonLeafNode(leafNode, new_key, mgmtData);
+
     // To split an inner node, redistrubute entries evenly, but push up the middle key
     // insertIntoNonLeafNode(); // Resursive function
     return RC_OK;

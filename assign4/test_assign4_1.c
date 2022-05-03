@@ -31,8 +31,8 @@ main (void)
   testName = "";
 
   testInsertAndFind();
-  testDelete();
-  testIndexScan();
+  // testDelete();
+  // testIndexScan();
 
   return 0;
 }
