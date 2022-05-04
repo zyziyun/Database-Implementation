@@ -32,6 +32,8 @@ typedef struct BTreeNode {
 
 typedef struct BTreeMtdt {
   int n; // maximum keys in each block
+  int minLeaf;
+  int minNonLeaf;
   int nodes; // the count of node
   int entries; // the count of entries
   DataType keyType;

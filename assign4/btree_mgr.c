@@ -105,7 +105,8 @@ RC openBtree (BTreeHandle **tree, char *idxId) {
     if (mgmtData->nodes == 0) {
         mgmtData->root = NULL;
     }
-    
+    mgmtData->minLeaf = (mgmtData->n + 1) / 2;
+    mgmtData->minNonLeaf = (mgmtData->n + 2) / 2 - 1;
     mgmtData->ph = ph;
     mgmtData->bm = bm;
     (*tree)->keyType = mgmtData->keyType;
@@ -347,6 +348,12 @@ int getInsertPos(BTreeNode* node, Value *key) {
     return insert_pos;
 }
 
+/**
+ * @brief build rid
+ * 
+ * @param rid 
+ * @return RID* 
+ */
 RID*
 buildRID(RID *rid) {
     RID *r = (RID *)malloc(sizeof(RID));
@@ -469,6 +476,13 @@ insertIntoParentNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
     }
 }
 
+Value *
+copyKey(Value *key) {
+    Value *new_key = (Value *) malloc(sizeof(Value));
+    memcpy(new_key, key, sizeof(*new_key));
+    return new_key;
+}
+
 /**
  * @brief insert key to B+Tree
  *        bottom-up strategy
@@ -498,13 +512,90 @@ RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
     // Split L into two nodes L and L2
     BTreeNode * rnode = splitLeafNode(leafNode, mgmtData);
     // Redistribute entries evenly and copy up middle key (new leaf's smallest key)
-    Value *middlekey = rnode->keys[0];
-    Value *new_key = (Value *) malloc(sizeof(Value));
-    memcpy(new_key, middlekey, sizeof(*new_key));
+    Value *new_key = copyKey(rnode->keys[0]);
     // Insert index entry pointing to L2 into parent of L
     // To split an inner node, redistrubute entries evenly, but push up the middle key Resursive function
     insertIntoParentNode(leafNode, new_key, mgmtData);
     return RC_OK;
+}
+
+/**
+ * @brief delete from leaf node
+ * 
+ * @param node 
+ * @param key 
+ * @param mgmtData 
+ */
+void
+deleteFromLeafNode(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
+    int insert_pos = getInsertPos(node, key);
+    for (int i = insert_pos; i < node->keyNums; i++) {
+        node->keys[i] = node->keys[i+1];
+        node->ptrs[i] = node->ptrs[i+1];
+    }
+    node->keyNums -= 1;
+    mgmtData->entries -= 1;
+}
+
+bool
+isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
+    int min = node->type == LEAF_NODE ? mgmtData->minLeaf : mgmtData->minNonLeaf;
+    if (keyNums >= mgmtData->minLeaf) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @brief try to redistribute borrow key from sibling
+ * 
+ * @param node 
+ * @param key 
+ * @param mgmtData 
+ * @return true 
+ * @return false 
+ */
+bool
+redistributeFromSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
+    BTreeNode *parent = node->parent;
+    BTreeNode *sibling = NULL;
+    int index;
+    
+    for (int i = 0; i <= parent->keyNums; i++) {
+        if (parent->ptrs[i] != node) {
+            continue;
+        }
+        // perfer left sibling
+        sibling = (BTreeNode *) parent->ptrs[i-1];
+        if (sibling && isEnoughSpace(sibling->keyNums - 1, sibling, mgmtData) == true) {
+            index = sibling->keyNums - 1;
+            break;
+        }
+        sibling = (BTreeNode *) parent->ptrs[i+1];
+        if (sibling && isEnoughSpace(sibling->keyNums - 1, sibling, mgmtData) == true) {
+            index = 0;
+            break;
+        }
+        sibling = NULL;
+        break;
+    }
+    if (sibling) {
+        Value *newkey = copyKey(sibling->keys[index]);
+        insertIntoLeafNode(node, newkey, sibling->ptrs[index], mgmtData);
+        sibling->keyNums -= 1;
+        free(sibling->keys[index]);
+        free(sibling->ptrs[index]);
+        sibling->keys[index] = NULL;
+        sibling->ptrs[index] = NULL;
+        return true;
+    }
+    // redistribute fail
+    return false;
+}
+
+void
+mergeSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
+
 }
 
 /**
@@ -515,8 +606,27 @@ RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
  * @return RC 
  */
 RC deleteKey (BTreeHandle *tree, Value *key) {
-    // key not in tree
-    // return RC_IM_KEY_NOT_FOUND;
+    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
+    // 1. Find correct leaf node L for k
+    BTreeNode* leafNode = findLeafNode(mgmtData->root, key);
+    // check: key not in tree
+    if (findEntryInNode(leafNode, key) == NULL) {
+        return RC_IM_KEY_NOT_FOUND;
+    }
+    // 2.Remove the entry
+    deleteFromLeafNode(leafNode, key, mgmtData);
+    // If L is at least half full, the operation is done
+    if (leafNode->keyNums >= mgmtData->minLeaf) {
+        return RC_OK;
+    }
+    // Otherwise
+    // try to redistribute, borrowing from sibling
+    if (redistributeFromSibling(leafNode, key, mgmtData) == true) {
+        return RC_OK;
+    }
+    // if redistribution fails, merge L and sibling.
+    // if merge occured, delete entry in parent pointing to L.
+    mergeSibling(leafNode, key, mgmtData);
     return RC_OK;
 }
 
