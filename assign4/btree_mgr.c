@@ -313,6 +313,12 @@ createLeafNode(BTreeMtdt *mgmtData) {
     return node;
 }
 
+/**
+ * @brief Create a Non Leaf Node object
+ * 
+ * @param mgmtData 
+ * @return BTreeNode* 
+ */
 BTreeNode *
 createNonLeafNode(BTreeMtdt *mgmtData) {
     BTreeNode * node = createNode(mgmtData);
@@ -321,8 +327,14 @@ createNonLeafNode(BTreeMtdt *mgmtData) {
     return node;
 }
 
-int 
-getInsertPos(BTreeNode* node, Value *key) {
+/**
+ * @brief Get the Insert Pos object
+ * 
+ * @param node 
+ * @param key 
+ * @return int 
+ */
+int getInsertPos(BTreeNode* node, Value *key) {
     int insert_pos = node->keyNums;
     for (int i = 0; i < node->keyNums; i++) {
         if (compareValue(node->keys[i], key) == 1) {
@@ -364,7 +376,7 @@ BTreeNode *
 splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
     BTreeNode * new_node = createLeafNode(mgmtData);
     // split right index
-    int rpoint = ceil(node->keyNums / 2);
+    int rpoint = (node->keyNums + 1) / 2;
     for (int i = rpoint; i < node->keyNums; i++) {
         int index = node->keyNums - rpoint - 1;
         new_node->keys[index] = node->keys[i];
@@ -379,9 +391,53 @@ splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
     return new_node;
 }
 
-// insert key to parent
-BTreeNode *
-insertIntoNonLeafNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
+/**
+ * @brief split non leaf node
+ * 
+ * @param node 
+ * @param mgmtData 
+ */
+void 
+splitNonLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
+    bool isPushUp = node->keyNums % 2 == 0;
+    BTreeNode * sibling = createNonLeafNode(mgmtData);
+    // split right index
+    int rpoint = (node->keyNums + 1) / 2;
+    // 5,  rpoint 3   [1.2.3] [4.5]
+    // 4,  rpoint 3   [1.2] 3 [4]
+    if (isPushUp) {
+        rpoint += 1;
+    }
+    sibling->ptrs[0] = node->ptrs[rpoint];
+    for (int i = rpoint; i < node->keyNums; i++) {
+        int index = node->keyNums - rpoint - 1;
+        sibling->keys[index] = node->keys[i];
+        sibling->ptrs[index+1] = node->ptrs[i+1];
+        node->keys[i] = NULL;
+        node->ptrs[i+1] = NULL;
+        sibling->keyNums += 1;
+        node->keyNums -= 1;
+    }
+    sibling->parent = node->parent;
+    node->next = sibling;
+    
+
+    if (isPushUp) {
+        insertIntoParentNode(node, node->keys[rpoint-1], mgmtData);
+        node->keys[rpoint-1] = NULL;
+        node->keyNums -= 1;
+    }
+}
+
+/**
+ * @brief insert into parent node
+ * 
+ * @param lnode 
+ * @param key 
+ * @param mgmtData 
+ */
+void
+insertIntoParentNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
     BTreeNode* rnode = lnode->next;
     if (rnode->parent == NULL) {
         rnode->parent = createNonLeafNode(mgmtData);
@@ -397,8 +453,11 @@ insertIntoNonLeafNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
     parent->ptrs[insert_pos + 1] = rnode;
     parent->keyNums += 1;
 
-    // if ()
+    if (parent->keyNums > mgmtData->n) {
+        splitNonLeafNode(parent, mgmtData);
+    }
 }
+
 /**
  * @brief insert key to B+Tree
  *        bottom-up strategy
@@ -432,38 +491,66 @@ RC insertKey (BTreeHandle *tree, Value *key, RID rid)  {
     Value *new_key = (Value *) malloc(sizeof(Value));
     memcpy(new_key, middlekey, sizeof(*new_key));
     // Insert index entry pointing to L2 into parent of L
-    insertIntoNonLeafNode(leafNode, new_key, mgmtData);
-
-    // To split an inner node, redistrubute entries evenly, but push up the middle key
-    // insertIntoNonLeafNode(); // Resursive function
+    // To split an inner node, redistrubute entries evenly, but push up the middle key Resursive function
+    insertIntoParentNode(leafNode, new_key, mgmtData);
     return RC_OK;
 }
 
+/**
+ * @brief delete key
+ * 
+ * @param tree 
+ * @param key 
+ * @return RC 
+ */
 RC deleteKey (BTreeHandle *tree, Value *key) {
     // key not in tree
     // return RC_IM_KEY_NOT_FOUND;
     return RC_OK;
 }
 
+/**
+ * @brief open tree scan
+ * 
+ * @param tree 
+ * @param handle 
+ * @return RC 
+ */
 RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
     *handle = MAKE_TREE_SCAN();
     (*handle)->tree = tree;
-    
     return RC_OK;
 }
 
+/**
+ * @brief next entry
+ * 
+ * @param handle 
+ * @param result 
+ * @return RC 
+ */
 RC nextEntry (BT_ScanHandle *handle, RID *result) {
     //  no more entries to be reyirmed
     // return RC_IM_NO_MORE_ENTRIES;
     return RC_OK;
 }
 
+/**
+ * @brief close tree scan
+ * 
+ * @param handle 
+ * @return RC 
+ */
 RC closeTreeScan (BT_ScanHandle *handle) {
     return RC_OK;
 }
 
-// debug and test functions
-// depth-first pre-order sequence
+/**
+ * @brief print tree (debug and test functions)
+ *        depth-first pre-order sequence
+ * @param tree 
+ * @return char* 
+ */
 char *printTree (BTreeHandle *tree) {
     return RC_OK;
 }

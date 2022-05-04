@@ -84,6 +84,9 @@ extern RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle);
 extern RC nextEntry (BT_ScanHandle *handle, RID *result);
 extern RC closeTreeScan (BT_ScanHandle *handle);
 
+// b+tree
+extern void insertIntoParentNode(BTreeNode*, Value *, BTreeMtdt *);
+
 // debug and test functions
 extern char *printTree (BTreeHandle *tree);
 
