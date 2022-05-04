@@ -201,14 +201,16 @@ compareValue(Value *key, Value *sign) {
         case DT_INT:
             if (key->v.intV == sign->v.intV) {
                 result = 0;
+            } else {
+                result = (key->v.intV > sign->v.intV) ? 1 : -1;
             }
-            result = (key->v.intV > sign->v.intV) ? 1 : -1;
             break;
         case DT_FLOAT:
             if (key->v.floatV == sign->v.floatV) {
                 result = 0;
+            } else {
+                result = (key->v.floatV > sign->v.floatV) ? 1 : -1;
             }
-            result = (key->v.floatV > sign->v.floatV) ? 1 : -1;
             break;
         case DT_STRING:
             result = strcmp(key->v.stringV, sign->v.stringV);
@@ -238,7 +240,7 @@ BTreeNode* findLeafNode(BTreeNode *node, Value *key) {
             return findLeafNode((BTreeNode *) node->ptrs[i], key);
         }
     }
-    return NULL;
+    return findLeafNode((BTreeNode *) node->ptrs[node->keyNums], key);
 }
 
 /**
@@ -274,7 +276,7 @@ RC findKey (BTreeHandle *tree, Value *key, RID *result) {
         return RC_IM_KEY_NOT_FOUND;
     }
     // 2. Find the position of entry in a node, binary search
-    result = findEntryInNode(leafNode, key);
+    (*result) = (*findEntryInNode(leafNode, key));
     if (result == NULL) {
         return RC_IM_KEY_NOT_FOUND;
     }
@@ -345,6 +347,14 @@ int getInsertPos(BTreeNode* node, Value *key) {
     return insert_pos;
 }
 
+RID*
+buildRID(RID *rid) {
+    RID *r = (RID *)malloc(sizeof(RID));
+    r->page = rid->page;
+    r->slot = rid->slot;
+    return r;
+}
+
 /**
  * @brief insert entry into leaf node
  * 
@@ -361,7 +371,7 @@ insertIntoLeafNode(BTreeNode* node,  Value *key, RID *rid, BTreeMtdt *mgmtData) 
         node->ptrs[i] = node->ptrs[i-1];
     }
     node->keys[insert_pos] = key;
-    node->ptrs[insert_pos] = rid;
+    node->ptrs[insert_pos] = buildRID(rid);
     node->keyNums += 1;
     mgmtData->entries += 1;
 }
@@ -421,7 +431,6 @@ splitNonLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
     sibling->parent = node->parent;
     node->next = sibling;
     
-
     if (isPushUp) {
         insertIntoParentNode(node, node->keys[rpoint-1], mgmtData);
         node->keys[rpoint-1] = NULL;
@@ -439,13 +448,15 @@ splitNonLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
 void
 insertIntoParentNode(BTreeNode* lnode, Value *key, BTreeMtdt *mgmtData) {
     BTreeNode* rnode = lnode->next;
-    if (rnode->parent == NULL) {
-        rnode->parent = createNonLeafNode(mgmtData);
-        rnode->ptrs[0] = lnode;
+    BTreeNode *parent = lnode->parent;
+    if (parent == NULL) {
+        parent = createNonLeafNode(mgmtData);
+        mgmtData->root = lnode->parent = rnode->parent = parent;
+        rnode->parent->ptrs[0] = lnode;
     }
-    BTreeNode *parent = rnode->parent;
     int insert_pos = getInsertPos(parent, key);
-    for (int i = parent->keyNums; i >= insert_pos; i--) {
+
+    for (int i = parent->keyNums; i > insert_pos; i--) {
         parent->keys[i] = parent->keys[i-1];
         parent->ptrs[i+1] = parent->ptrs[i];
     }
@@ -552,5 +563,11 @@ RC closeTreeScan (BT_ScanHandle *handle) {
  * @return char* 
  */
 char *printTree (BTreeHandle *tree) {
+    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
+    BTreeNode *root = mgmtData->root;
+    if (root == NULL) {
+        printf("This is an empty tree.\n");
+        return NULL;
+    }
     return RC_OK;
 }

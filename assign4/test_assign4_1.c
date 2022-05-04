@@ -76,7 +76,7 @@ testInsertAndFind (void)
 
   // check index stats
   TEST_CHECK(getNumNodes(tree, &testint));
-  ASSERT_EQUALS_INT(4,testint, "number of nodes in btree"); // Fixed Summer 2021 - Old: ASSERT_EQUALS_INT(testint,4, "number of nodes in btree");
+  ASSERT_EQUALS_INT(4, testint, "number of nodes in btree"); // Fixed Summer 2021 - Old: ASSERT_EQUALS_INT(testint,4, "number of nodes in btree");
   TEST_CHECK(getNumEntries(tree, &testint));
   ASSERT_EQUALS_INT(numInserts,testint, "number of entries in btree");// Fixed Summer 2021 - Old: ASSERT_EQUALS_INT(testint, numInserts, "number of entries in btree");
 
