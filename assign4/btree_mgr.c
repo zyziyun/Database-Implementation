@@ -559,28 +559,26 @@ isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
 /**
  * @brief 
  * 
- * @param node 
- * @param key 
+ * @param node  
  */
 bool
-deleteParentEntry(BTreeNode *node, Value *key) {
-    bool isDelete = false;
+deleteParentEntry(BTreeNode *node) {
     BTreeNode *parent = node->parent;
-    // 1. delete key
-    for (int i = 0; i < parent->keyNums; i++) {
-        if (compareValue(key, parent->keys[i]) == 0) {
-            for (int j = i; j < parent->keyNums - 1; j++) {
+    for (int i = 0; i <= parent->keyNums; i++) {
+        if (parent->ptrs[i] == node) {
+            int keyIndex = i-1 < 0 ? 0 : i-1;
+            parent->keys[keyIndex] = NULL;
+            parent->ptrs[i] = NULL;
+            for (int j = keyIndex; j < parent->keyNums - 1; j++) {
                 parent->keys[j] = parent->keys[j+1];
-                parent->ptrs[j+1] = parent->ptrs[j+2];
             }
-            parent->keys[parent->keyNums - 1] = NULL;
-            parent->ptrs[parent->keyNums] = NULL;
+            for (int j = i; j < parent->keyNums; j++) {
+                parent->ptrs[j] = parent->ptrs[j+1];
+            }
             parent->keyNums -= 1;
-            isDelete = true;
             break;
         }
     }
-    return isDelete;
 }
 /**
  * @brief 
@@ -595,18 +593,30 @@ updateParentEntry(BTreeNode *node, Value *key, Value *newkey) {
     if (compareValue(key, newkey) == 0) {
         return;
     }
-    if (deleteParentEntry(node, key) == false) {
+    
+    bool isDelete = false;
+    BTreeNode *parent = node->parent;
+    // 1. delete key
+    for (int i = 0; i < parent->keyNums; i++) {
+        if (compareValue(key, parent->keys[i]) == 0) {
+            for (int j = i; j < parent->keyNums - 1; j++) {
+                parent->keys[j] = parent->keys[j+1];
+            }
+            parent->keys[parent->keyNums - 1] = NULL;
+            parent->keyNums -= 1;
+            isDelete = true;
+            break;
+        }
+    }
+    if (isDelete == false) {
         return;
     }
-    BTreeNode *parent = node->parent;
     // 2. add new key
     int insert_pos = getInsertPos(parent, newkey);
     for (int i = parent->keyNums; i >= insert_pos; i--) {
         parent->keys[i] = parent->keys[i-1];
-        parent->ptrs[i+1] = parent->ptrs[i];
     }
     parent->keys[insert_pos] = newkey;
-    parent->ptrs[insert_pos + 1] = node;
     parent->keyNums += 1;
 }
 
@@ -724,25 +734,14 @@ mergeSibling(BTreeNode *node, BTreeNode *sibling, BTreeMtdt *mgmtData) {
         sibling->keys = newkeys;
         sibling->ptrs = newptrs;
     }
+    // update parent
+    deleteParentEntry(node);
     mgmtData->nodes -= 1;
-    for (int i = 0; i <= parent->keyNums; i++) {
-        if (parent->ptrs[i] == node) {
-            int keyIndex = i-1 < 0 ? 0 : i-1;
-            parent->keys[keyIndex] = NULL;
-            parent->ptrs[i] = NULL;
-            for (int j = keyIndex; j < parent->keyNums - 1; j++) {
-                parent->keys[j] = parent->keys[j+1];
-            }
-            for (int j = i; j < parent->keyNums; j++) {
-                parent->ptrs[j] = parent->ptrs[j+1];
-            }
-            parent->keyNums -= 1;
-            break;
-        }
-    }
     free(node->ptrs);
     free(node->keys);
     free(node);
+    // Todo: recurisve
+    if (sibling->keyNums < mgmtData->minNonLeaf) {}
 }
 
 /**
