@@ -150,10 +150,13 @@ void testDelete(void)
     // delete entries
     for (i = 0; i < numInserts; i++)
     {
-      if (deletes[i])
+      if (deletes[i]) {
+        printf("\ndelete: %s \n", serializeValue(keys[i]));
         TEST_CHECK(deleteKey(tree, keys[i]));
+        printTree(tree);
+      }
     }
-
+    
     // search for keys
     for (i = 0; i < 1000; i++)
     {

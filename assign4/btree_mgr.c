@@ -277,10 +277,11 @@ RC findKey (BTreeHandle *tree, Value *key, RID *result) {
         return RC_IM_KEY_NOT_FOUND;
     }
     // 2. Find the position of entry in a node, binary search
-    (*result) = (*findEntryInNode(leafNode, key));
-    if (result == NULL) {
+    RID *r = findEntryInNode(leafNode, key);
+    if (r == NULL) {
         return RC_IM_KEY_NOT_FOUND;
     }
+    (*result) = (*r);
     return RC_OK;
 }
 
@@ -340,7 +341,7 @@ createNonLeafNode(BTreeMtdt *mgmtData) {
 int getInsertPos(BTreeNode* node, Value *key) {
     int insert_pos = node->keyNums;
     for (int i = 0; i < node->keyNums; i++) {
-        if (compareValue(node->keys[i], key) == 1) {
+        if (compareValue(node->keys[i], key) >= 0) {
             insert_pos = i;
             break;
         }
@@ -537,6 +538,15 @@ deleteFromLeafNode(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
     mgmtData->entries -= 1;
 }
 
+/**
+ * @brief 
+ * 
+ * @param keyNums 
+ * @param node 
+ * @param mgmtData 
+ * @return true 
+ * @return false 
+ */
 bool
 isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
     int min = node->type == LEAF_NODE ? mgmtData->minLeaf : mgmtData->minNonLeaf;
@@ -551,35 +561,56 @@ isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
  * 
  * @param node 
  * @param key 
- * @param uindex update node entry index
  */
-void
-updateParentNode(BTreeNode *node, Value *key, Value *newkey) {
-    // equal = no update
-    if (compareValue(key, newkey) == 0) {
-        return;
-    }
+bool
+deleteParentEntry(BTreeNode *node, Value *key) {
+    bool isDelete = false;
     BTreeNode *parent = node->parent;
     // 1. delete key
     for (int i = 0; i < parent->keyNums; i++) {
         if (compareValue(key, parent->keys[i]) == 0) {
             for (int j = i; j < parent->keyNums - 1; j++) {
                 parent->keys[j] = parent->keys[j+1];
+                parent->ptrs[j+1] = parent->ptrs[j+2];
             }
+            parent->keys[parent->keyNums - 1] = NULL;
+            parent->ptrs[parent->keyNums] = NULL;
+            parent->keyNums -= 1;
+            isDelete = true;
             break;
         }
     }
-    // 2. add new key
-    for (int i = 0; i < parent->keyNums; i++) {
-        if (compareValue(newkey, parent->keys[i]) >= 0) {
-            for (int j = parent->keyNums - 1; j > i; j--) {
-                parent->keys[j] = parent->keys[j-1];
-            }
-            parent->keys[i] = newkey;
-            break;
-        }
-    }
+    return isDelete;
 }
+/**
+ * @brief 
+ * 
+ * @param node Inner_Node
+ * @param key 
+ * @param newkey 
+ */
+void
+updateParentEntry(BTreeNode *node, Value *key, Value *newkey) {
+    // equal = no update
+    if (compareValue(key, newkey) == 0) {
+        return;
+    }
+    if (deleteParentEntry(node, key) == false) {
+        return;
+    }
+    BTreeNode *parent = node->parent;
+    // 2. add new key
+    int insert_pos = getInsertPos(parent, newkey);
+    for (int i = parent->keyNums; i >= insert_pos; i--) {
+        parent->keys[i] = parent->keys[i-1];
+        parent->ptrs[i+1] = parent->ptrs[i];
+    }
+    parent->keys[insert_pos] = newkey;
+    parent->ptrs[insert_pos + 1] = node;
+    parent->keyNums += 1;
+}
+
+
 
 /**
  * @brief try to redistribute borrow key from sibling
@@ -616,7 +647,7 @@ redistributeFromSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
     }
     if (sibling) {
         insertIntoLeafNode(node, copyKey(sibling->keys[index]), sibling->ptrs[index], mgmtData);
-        updateParentNode(node, key, copyKey(sibling->keys[index]));
+        updateParentEntry(node, key, copyKey(sibling->keys[index]));
         sibling->keyNums -= 1;
         free(sibling->keys[index]);
         free(sibling->ptrs[index + 1]);
@@ -628,26 +659,53 @@ redistributeFromSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
     return false;
 }
 
-void
-mergeSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
-    BTreeNode *parent = node->parent;
+/**
+ * @brief 
+ * 
+ * @param node 
+ * @param mgmtData 
+ * @return BTreeNode* 
+ */
+BTreeNode *
+checkSiblingCapacity(BTreeNode *node, BTreeMtdt *mgmtData) {
     BTreeNode *sibling = NULL;
-    int index;
-    
+    BTreeNode * parent = node->parent;
     for (int i = 0; i <= parent->keyNums; i++) {
         if (parent->ptrs[i] != node) {
             continue;
         }
-        // perfer left sibling
-        sibling = (BTreeNode *) parent->ptrs[i-1];
-        if (sibling && isEnoughSpace(sibling->keyNums + node->keyNums, sibling, mgmtData) == true) {
-            break;
+        if (i - 1 >= 0) {
+            // perfer left sibling
+            sibling = (BTreeNode *) parent->ptrs[i-1];
+            if (isEnoughSpace(sibling->keyNums + node->keyNums, sibling, mgmtData) == true) {
+                break;
+            }
         }
-        sibling = (BTreeNode *) parent->ptrs[i+1];
+        if (i + 1 <= parent->keyNums + 1) {
+            sibling = (BTreeNode *) parent->ptrs[i+1];
+            if (isEnoughSpace(sibling->keyNums + node->keyNums, sibling, mgmtData) == true) {
+                break;
+            }
+        }
+        sibling = NULL;
         break;
     }
-    if (sibling != NULL) {
-        int key_count = sibling->keyNums + node->keyNums; 
+    return sibling;
+}
+
+/**
+ * @brief 
+ * 
+ * @param node 
+ * @param sibling 
+ * @param mgmtData 
+ */
+void
+mergeSibling(BTreeNode *node, BTreeNode *sibling, BTreeMtdt *mgmtData) {
+    BTreeNode *parent = node->parent;
+    
+    int key_count = sibling->keyNums + node->keyNums; 
+    if (key_count > sibling->keyNums) {
         int i = 0, j = 0, curr = 0;
         Value **newkeys = malloc((key_count) * sizeof(Value *));
         void **newptrs = malloc((key_count + 1) * sizeof(void *));
@@ -665,6 +723,22 @@ mergeSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
         free(sibling->ptrs);
         sibling->keys = newkeys;
         sibling->ptrs = newptrs;
+    }
+    mgmtData->nodes -= 1;
+    for (int i = 0; i <= parent->keyNums; i++) {
+        if (parent->ptrs[i] == node) {
+            int keyIndex = i-1 < 0 ? 0 : i-1;
+            parent->keys[keyIndex] = NULL;
+            parent->ptrs[i] = NULL;
+            for (int j = keyIndex; j < parent->keyNums - 1; j++) {
+                parent->keys[j] = parent->keys[j+1];
+            }
+            for (int j = i; j < parent->keyNums; j++) {
+                parent->ptrs[j] = parent->ptrs[j+1];
+            }
+            parent->keyNums -= 1;
+            break;
+        }
     }
     free(node->ptrs);
     free(node->keys);
@@ -690,17 +764,20 @@ RC deleteKey (BTreeHandle *tree, Value *key) {
     deleteFromLeafNode(leafNode, key, mgmtData);
     // If L is at least half full, the operation is done
     if (leafNode->keyNums >= mgmtData->minLeaf) {
-        updateParentNode(leafNode, key, copyKey(leafNode->keys[0]));
+        Value *newkey = copyKey(leafNode->keys[0]);
+        updateParentEntry(leafNode, key, newkey);
         return RC_OK;
     }
     // Otherwise
     // try to redistribute, borrowing from sibling
-    if (redistributeFromSibling(leafNode, key, mgmtData) == true) {
-        return RC_OK;
-    }
     // if redistribution fails, merge L and sibling.
     // if merge occured, delete entry in parent pointing to L.
-    mergeSibling(leafNode, key, mgmtData);
+    BTreeNode *sibling = checkSiblingCapacity(leafNode, mgmtData);
+    if (sibling) {
+        mergeSibling(leafNode, sibling, mgmtData);
+    } else {
+        redistributeFromSibling(leafNode, key, mgmtData);
+    }
     return RC_OK;
 }
 
@@ -740,9 +817,6 @@ RC closeTreeScan (BT_ScanHandle *handle) {
     return RC_OK;
 }
 
-
-
-
 /**
  * @brief print tree (debug and test functions)
  *        depth-first pre-order sequence
@@ -770,9 +844,9 @@ char *printTree (BTreeHandle *tree) {
                 RID *rid = (RID *)node->ptrs[i];
                 printf("%i.%i,", rid->page, rid->slot);
             } else {
+                printf("%i,", count);
                 queue[count] = (BTreeNode *)node->ptrs[i];
                 count += 1;
-                printf("%i,", count);
             }
             if (node->type == LEAF_NODE && i == node->keyNums - 1) {
                 printf("%s", serializeValue(node->keys[i]));
@@ -781,9 +855,9 @@ char *printTree (BTreeHandle *tree) {
             }
         }
         if (node->type == Inner_NODE) {
+            printf("%i", count);
             queue[count] = (BTreeNode *)node->ptrs[node->keyNums];
             count += 1;
-            printf("%i", count);
         }
         level += 1;
         curr += 1;
