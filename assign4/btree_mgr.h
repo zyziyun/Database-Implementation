@@ -11,6 +11,7 @@ typedef struct BTreeHandle {
   DataType keyType;
   char *idxId;
   void *mgmtData;
+  BTreeNode *root;
 } BTreeHandle;
 
 typedef enum NodeType {
@@ -19,6 +20,8 @@ typedef enum NodeType {
 } NodeType;
 
 typedef struct BTreeNode {
+  int size;
+  int isLeaf;
   NodeType type;
   Value **keys; // array[0...n]
   // leaf-node => RID
@@ -27,6 +30,7 @@ typedef struct BTreeNode {
   int keyNums; // the count of key
 
   struct BTreeNode *next; // sibling
+  struct BTreeNode *children;//children;
   struct BTreeNode *parent; // parent
 } BTreeNode;
 
@@ -45,11 +49,15 @@ typedef struct BTreeMtdt {
 } BTreeMtdt;
 
 
-
 typedef struct BT_ScanHandle {
   BTreeHandle *tree;
   void *mgmtData;
 } BT_ScanHandle;
+
+typedef struct ScanMgmt {
+  BTreeNode *currentNode;
+  int elementIndex;
+} ScanMgmt;
 
 #define MAKE_TREE_HANDLE()				\
 		((BTreeHandle *) malloc (sizeof(BTreeHandle)))

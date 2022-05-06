@@ -4,6 +4,8 @@
 #include "storage_mgr.h"
 #include "buffer_mgr.h"
 #include "record_mgr.h"
+#include "string.h"
+
 
 #include <string.h>
 #include <stdlib.h>
@@ -237,6 +239,7 @@ BTreeNode* findLeafNode(BTreeNode *node, Value *key) {
         return node;
     }
     for (int i = 0; i < node->keyNums; i++) {
+    
         if (compareValue(key, node->keys[i]) < 0) {
             return findLeafNode((BTreeNode *) node->ptrs[i], key);
         }
@@ -781,15 +784,30 @@ RC deleteKey (BTreeHandle *tree, Value *key) {
 }
 
 /**
- * @brief open tree scan
+ * @brief initialize the scan which is used to scan the entries in the B+ tree
  * 
  * @param tree 
  * @param handle 
  * @return RC 
  */
+BTreeMtdt * treeMgmt = NULL;
 RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
+    ScanMgmt *scan = malloc(sizeof(ScanMgmt));
+    //BTreeMtdt *tree = (BTreeMtdt *)tree->mgmtData;
+    //allocating memory space
     *handle = MAKE_TREE_SCAN();
     (*handle)->tree = tree;
+    scan->currentNode = tree->root;
+    //BTreeNode *node = treeMgmt->root;
+    if(treeMgmt->root==NULL){
+        return RC_IM_Empty_Tree;
+    }else{
+        while(!scan->currentNode->isLeaf){
+            scan->currentNode = scan->currentNode->keys[0];
+        }
+    }
+    scan->elementIndex = 0;
+    (*handle)->mgmtData = scan;
     return RC_OK;
 }
 
@@ -813,6 +831,9 @@ RC nextEntry (BT_ScanHandle *handle, RID *result) {
  * @return RC 
  */
 RC closeTreeScan (BT_ScanHandle *handle) {
+    free(handle);
+    handle->mgmtData = NULL;
+	
     return RC_OK;
 }
 
