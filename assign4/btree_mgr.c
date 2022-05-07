@@ -542,7 +542,7 @@ deleteFromLeafNode(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
 }
 
 /**
- * @brief 
+ * @brief checks for enough space
  * 
  * @param keyNums 
  * @param node 
@@ -560,7 +560,7 @@ isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
 }
 
 /**
- * @brief 
+ * @brief Deletes the parent entry
  * 
  * @param node  
  */
@@ -583,7 +583,7 @@ void deleteParentEntry(BTreeNode *node) {
     }
 }
 /**
- * @brief 
+ * @brief Updates parent entry
  * 
  * @param node Inner_Node
  * @param key 
@@ -672,7 +672,7 @@ redistributeFromSibling(BTreeNode *node, Value *key, BTreeMtdt *mgmtData) {
 }
 
 /**
- * @brief 
+ * @brief Checks capacity of sibling
  * 
  * @param node 
  * @param mgmtData 
@@ -706,7 +706,7 @@ checkSiblingCapacity(BTreeNode *node, BTreeMtdt *mgmtData) {
 }
 
 /**
- * @brief 
+ * @brief Merges siblings
  * 
  * @param node 
  * @param sibling 
