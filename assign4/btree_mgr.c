@@ -791,31 +791,20 @@ RC deleteKey (BTreeHandle *tree, Value *key) {
  */
 
 RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
-    Scankey *keydata = NULL;
-
-    Btree_stat *treeStat;
-    BTreeNode *node;
-
-    treeStat = tree->mgmtData;
-    node = treeStat->mgmtData;
-
-    while (node->ptrs[0] != NULL) {
-
-        node = node->ptrs[0];
-
+    BTreeMtdt *mgmtData = (BTreeMtdt *) tree->mgmtData;
+    BTreeNode *node = (BTreeNode *)mgmtData->root;
+    if (node == NULL) {
+        return RC_IM_KEY_NOT_FOUND;
     }
-
-    (*handle) = (BT_ScanHandle *) malloc(sizeof (BT_ScanHandle));
-    if (*handle == NULL)
-        return RC_IM_Empty_Tree;
-
-    keydata = (Scankey *) malloc(sizeof (Scankey));
-
-    keydata->currentNode = node;
-    keydata->recnumber = 0;
-
-    (*handle)->tree = tree;
-    (*handle)->mgmtData = (void *) keydata;
+    // find the first leaf node
+    while (node->type == Inner_NODE) {
+        node = node->ptrs[0];
+    }
+    BT_ScanMtdt *scanMtdt = (BT_ScanMtdt *) malloc(sizeof (BT_ScanMtdt));
+    (*handle) = malloc(sizeof (BT_ScanHandle));
+    scanMtdt->keyIndex = 0;
+    scanMtdt->node = node;
+    (*handle)->mgmtData = scanMtdt;
     return RC_OK;
 }
 
@@ -827,45 +816,25 @@ RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
  * @return RC 
  */
 RC nextEntry (BT_ScanHandle *handle, RID *result) {
+    BT_ScanMtdt *scanMtdt = (BT_ScanMtdt *) handle->mgmtData;
+    RID *rid;
     //  no more entries to be reyirmed
     // return RC_IM_NO_MORE_ENTRIES;
-    BTreeNode *node;
-    int numrec;
-    Scankey *keydata = NULL;
+    BTreeNode* node = scanMtdt->node;
+    int keyIndex = scanMtdt->keyIndex;
 
-    keydata = handle->mgmtData;
-    node = keydata->currentNode;
-    numrec = keydata->recnumber;
-
-    if (node != NULL) {
-        if (node->keyNums > numrec) {
-
-            *result = node->records[numrec];
-            numrec++;
-
-        }
-        if (numrec == node->keyNums) {
-
-            node = node->next;
-            numrec = 0;
-
-        }
-
-        keydata->currentNode = node;
-        keydata->recnumber = numrec;
-
-        if (result == NULL) {
-
-            return RC_IM_NO_MORE_ENTRIES;
-
-        }
-
-        return RC_OK;
+    if (keyIndex < node->keyNums) {
+        rid = (RID *) node->ptrs[keyIndex];
+        scanMtdt->keyIndex += 1;
     } else {
-
-        return RC_IM_NO_MORE_ENTRIES;
-
+        if (node->next == NULL) {
+            return RC_IM_NO_MORE_ENTRIES;
+        }
+        scanMtdt->node = node->next;
+        nextEntry(handle, result);
     }
+    (*result) = (*buildRID(rid));
+    return RC_OK;
 }
 
 /**
@@ -875,9 +844,8 @@ RC nextEntry (BT_ScanHandle *handle, RID *result) {
  * @return RC 
  */
 RC closeTreeScan (BT_ScanHandle *handle) {
+    free(handle->mgmtData);
     free(handle);
-    handle->mgmtData = NULL;
-	
     return RC_OK;
 }
 

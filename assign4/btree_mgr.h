@@ -10,6 +10,7 @@ typedef enum NodeType {
 	Inner_NODE = 1,
 	LEAF_NODE = 0
 } NodeType;
+
 typedef struct BTreeNode {
   NodeType type;
   Value **keys; // array[0...n]
@@ -21,26 +22,14 @@ typedef struct BTreeNode {
   struct BTreeNode *next; // sibling
   struct BTreeNode *parent; // parent
 } BTreeNode;
+
 // structure for accessing btrees
 typedef struct BTreeHandle {
   DataType keyType;
   char *idxId;
   void *mgmtData;
-  BTreeNode *root;
 } BTreeHandle;
 
-typedef struct Scankey {
-    struct BTreeNode *currentNode;
-    int recnumber;
-} Scankey;
-
-typedef struct Btree_stat {
-    void *mgmtData;
-    void *fileInfo;
-    int num_nodes;
-    int num_inserts;
-    int order;
-} Btree_stat;
 
 typedef struct BTreeMtdt {
   int n; // maximum keys in each block
@@ -61,6 +50,11 @@ typedef struct BT_ScanHandle {
   BTreeHandle *tree;
   void *mgmtData;
 } BT_ScanHandle;
+
+typedef struct BT_ScanMtdt {
+  int keyIndex;
+  BTreeNode *node;
+} BT_ScanMtdt;
 
 
 
