@@ -6,6 +6,21 @@
 #include "dberror.h"
 #include "tables.h"
 
+typedef enum NodeType {
+	Inner_NODE = 1,
+	LEAF_NODE = 0
+} NodeType;
+typedef struct BTreeNode {
+  NodeType type;
+  Value **keys; // array[0...n]
+  // leaf-node => RID
+  // non-leaf-node => next level node
+  void **ptrs; // array[0...n]
+  int keyNums; // the count of key
+  RID *records;
+  struct BTreeNode *next; // sibling
+  struct BTreeNode *parent; // parent
+} BTreeNode;
 // structure for accessing btrees
 typedef struct BTreeHandle {
   DataType keyType;
@@ -14,25 +29,18 @@ typedef struct BTreeHandle {
   BTreeNode *root;
 } BTreeHandle;
 
-typedef enum NodeType {
-	Inner_NODE = 1,
-	LEAF_NODE = 0
-} NodeType;
+typedef struct Scankey {
+    struct BTreeNode *currentNode;
+    int recnumber;
+} Scankey;
 
-typedef struct BTreeNode {
-  int size;
-  int isLeaf;
-  NodeType type;
-  Value **keys; // array[0...n]
-  // leaf-node => RID
-  // non-leaf-node => next level node
-  void **ptrs; // array[0...n]
-  int keyNums; // the count of key
-
-  struct BTreeNode *next; // sibling
-  struct BTreeNode *children;//children;
-  struct BTreeNode *parent; // parent
-} BTreeNode;
+typedef struct Btree_stat {
+    void *mgmtData;
+    void *fileInfo;
+    int num_nodes;
+    int num_inserts;
+    int order;
+} Btree_stat;
 
 typedef struct BTreeMtdt {
   int n; // maximum keys in each block
@@ -43,7 +51,7 @@ typedef struct BTreeMtdt {
   DataType keyType;
 
   BTreeNode *root;
-
+  
   BM_PageHandle *ph;
   BM_BufferPool *bm;
 } BTreeMtdt;
@@ -54,10 +62,7 @@ typedef struct BT_ScanHandle {
   void *mgmtData;
 } BT_ScanHandle;
 
-typedef struct ScanMgmt {
-  BTreeNode *currentNode;
-  int elementIndex;
-} ScanMgmt;
+
 
 #define MAKE_TREE_HANDLE()				\
 		((BTreeHandle *) malloc (sizeof(BTreeHandle)))

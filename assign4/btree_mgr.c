@@ -564,8 +564,7 @@ isEnoughSpace(int keyNums, BTreeNode *node, BTreeMtdt *mgmtData) {
  * 
  * @param node  
  */
-bool
-deleteParentEntry(BTreeNode *node) {
+void deleteParentEntry(BTreeNode *node) {
     BTreeNode *parent = node->parent;
     for (int i = 0; i <= parent->keyNums; i++) {
         if (parent->ptrs[i] == node) {
@@ -790,24 +789,33 @@ RC deleteKey (BTreeHandle *tree, Value *key) {
  * @param handle 
  * @return RC 
  */
-BTreeMtdt * treeMgmt = NULL;
+
 RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
-    ScanMgmt *scan = malloc(sizeof(ScanMgmt));
-    //BTreeMtdt *tree = (BTreeMtdt *)tree->mgmtData;
-    //allocating memory space
-    *handle = MAKE_TREE_SCAN();
-    (*handle)->tree = tree;
-    scan->currentNode = tree->root;
-    //BTreeNode *node = treeMgmt->root;
-    if(treeMgmt->root==NULL){
-        return RC_IM_Empty_Tree;
-    }else{
-        while(!scan->currentNode->isLeaf){
-            scan->currentNode = scan->currentNode->keys[0];
-        }
+    Scankey *keydata = NULL;
+
+    Btree_stat *treeStat;
+    BTreeNode *node;
+
+    treeStat = tree->mgmtData;
+    node = treeStat->mgmtData;
+
+    while (node->ptrs[0] != NULL) {
+
+        node = node->ptrs[0];
+
     }
-    scan->elementIndex = 0;
-    (*handle)->mgmtData = scan;
+
+    (*handle) = (BT_ScanHandle *) malloc(sizeof (BT_ScanHandle));
+    if (*handle == NULL)
+        return RC_IM_Empty_Tree;
+
+    keydata = (Scankey *) malloc(sizeof (Scankey));
+
+    keydata->currentNode = node;
+    keydata->recnumber = 0;
+
+    (*handle)->tree = tree;
+    (*handle)->mgmtData = (void *) keydata;
     return RC_OK;
 }
 
@@ -821,7 +829,43 @@ RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
 RC nextEntry (BT_ScanHandle *handle, RID *result) {
     //  no more entries to be reyirmed
     // return RC_IM_NO_MORE_ENTRIES;
-    return RC_OK;
+    BTreeNode *node;
+    int numrec;
+    Scankey *keydata = NULL;
+
+    keydata = handle->mgmtData;
+    node = keydata->currentNode;
+    numrec = keydata->recnumber;
+
+    if (node != NULL) {
+        if (node->keyNums > numrec) {
+
+            *result = node->records[numrec];
+            numrec++;
+
+        }
+        if (numrec == node->keyNums) {
+
+            node = node->next;
+            numrec = 0;
+
+        }
+
+        keydata->currentNode = node;
+        keydata->recnumber = numrec;
+
+        if (result == NULL) {
+
+            return RC_IM_NO_MORE_ENTRIES;
+
+        }
+
+        return RC_OK;
+    } else {
+
+        return RC_IM_NO_MORE_ENTRIES;
+
+    }
 }
 
 /**
