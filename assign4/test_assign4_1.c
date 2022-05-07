@@ -232,19 +232,22 @@ void testIndexScan(void)
     TEST_CHECK(openBtree(&tree, "testidx"));
 
     // insert keys
-    for (i = 0; i < numInserts; i++)
+    for (i = 0; i < numInserts; i++) {
       TEST_CHECK(insertKey(tree, keys[permute[i]], insert[permute[i]]));
+    }
 
     // check index stats
     TEST_CHECK(getNumEntries(tree, &testint));
     ASSERT_EQUALS_INT(numInserts, testint, "number of entries in btree"); // Fixed: Summer 2021 - Old: ASSERT_EQUALS_INT(testint, numInserts, "number of entries in btree");
 
     // execute scan, we should see tuples in sort order
+    // printTree(tree);
     openTreeScan(tree, &sc);
     i = 0;
     while ((rc = nextEntry(sc, &rid)) == RC_OK)
     {
       RID expRid = insert[i++];
+      // printf("%i.%i", expRid.page, expRid.slot);
       ASSERT_EQUALS_RID(expRid, rid, "did we find the correct RID?");
     }
     ASSERT_EQUALS_INT(RC_IM_NO_MORE_ENTRIES, rc, "no error returned by scan");

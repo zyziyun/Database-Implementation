@@ -407,6 +407,7 @@ splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
         new_node->keyNums += 1;
         node->keyNums -= 1;
     }
+    new_node->next = node->next;
     node->next = new_node;
     new_node->parent = node->parent;
     return new_node;
@@ -420,33 +421,32 @@ splitLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
  */
 void 
 splitNonLeafNode(BTreeNode* node, BTreeMtdt *mgmtData) {
-    bool isPushUp = node->keyNums % 2 == 0;
     BTreeNode * sibling = createNonLeafNode(mgmtData);
     // split right index
-    int rpoint = (node->keyNums + 1) / 2;
-    // 5,  rpoint 3   [1.2.3] [4.5]
-    // 4,  rpoint 3   [1.2] 3 [4]
-    if (isPushUp) {
-        rpoint += 1;
-    }
-    sibling->ptrs[0] = node->ptrs[rpoint];
-    for (int i = rpoint; i < node->keyNums; i++) {
-        int index = node->keyNums - rpoint - 1;
+    int mid = node->keyNums / 2;
+    // 5, [1.2] 3 [4.5]
+    // 4, [1.2] 3 [4]
+    Value *pushKey = copyKey(node->keys[mid]);
+
+    int index = 0;
+    for (int i = mid + 1; i < node->keyNums; i++) {
         sibling->keys[index] = node->keys[i];
-        sibling->ptrs[index+1] = node->ptrs[i+1];
+        sibling->ptrs[index + 1] = node->ptrs[i+1];
         node->keys[i] = NULL;
         node->ptrs[i+1] = NULL;
         sibling->keyNums += 1;
         node->keyNums -= 1;
+        index += 1;
     }
+    sibling->ptrs[0] = node->ptrs[mid + 1];
+    node->ptrs[mid + 1] = NULL;
+    node->keyNums -= 1;// pushKey
+    node->keys[mid] = NULL;
+
     sibling->parent = node->parent;
     node->next = sibling;
     
-    if (isPushUp) {
-        insertIntoParentNode(node, node->keys[rpoint-1], mgmtData);
-        node->keys[rpoint-1] = NULL;
-        node->keyNums -= 1;
-    }
+    insertIntoParentNode(node, pushKey, mgmtData);
 }
 
 /**
@@ -818,22 +818,21 @@ RC openTreeScan (BTreeHandle *tree, BT_ScanHandle **handle) {
 RC nextEntry (BT_ScanHandle *handle, RID *result) {
     BT_ScanMtdt *scanMtdt = (BT_ScanMtdt *) handle->mgmtData;
     RID *rid;
-    //  no more entries to be reyirmed
-    // return RC_IM_NO_MORE_ENTRIES;
     BTreeNode* node = scanMtdt->node;
     int keyIndex = scanMtdt->keyIndex;
 
     if (keyIndex < node->keyNums) {
-        rid = (RID *) node->ptrs[keyIndex];
+        rid = buildRID((RID *) node->ptrs[keyIndex]);
         scanMtdt->keyIndex += 1;
     } else {
         if (node->next == NULL) {
             return RC_IM_NO_MORE_ENTRIES;
         }
+        scanMtdt->keyIndex = 0;
         scanMtdt->node = node->next;
-        nextEntry(handle, result);
+        return nextEntry(handle, result);
     }
-    (*result) = (*buildRID(rid));
+    (*result) = (*rid);
     return RC_OK;
 }
 

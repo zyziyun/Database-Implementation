@@ -95,7 +95,8 @@ extern RC closeTreeScan (BT_ScanHandle *handle);
 
 // b+tree
 extern void insertIntoParentNode(BTreeNode*, Value *, BTreeMtdt *);
-extern RID* buildRID(RID *rid);
+extern RID* buildRID(RID *);
+extern Value *copyKey(Value *); 
 
 // debug and test functions
 extern char *printTree (BTreeHandle *tree);
