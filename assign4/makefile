@@ -8,10 +8,10 @@ SOURCE2 = test_expr.c $(FILE_LIST)
 all: test_assign4_1 test_expr
 
 test_assign4_1: $(SOURCE1)
-	gcc -o $(TARGET1) $(SOURCE1) -g -lm
+	gcc -o $@ $^ -g -lm
 
 test_expr: $(SOURCE2)
-	gcc -o $(TARGET2) $(SOURCE2) -g -lm
+	gcc -o $@ $^ -g -lm
 
 clean:
 	rm -rf *.o $(TARGET1) $(TARGET2)
